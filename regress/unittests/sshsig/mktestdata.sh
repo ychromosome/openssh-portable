@@ -3,6 +3,19 @@
 
 NAMESPACE=unittest
 
+ed301_testdata() {
+	ssh-keygen -t ed301 -C "ED301 test key" -N "" -f ed301
+	ssh-keygen -Y sign -f ed301 -n "$NAMESPACE" - < signed-data > ed301.sig
+}
+
+if [ "${1:-}" = ed301 ]; then
+	set -e
+	cd testdata
+	ed301_testdata
+	exit 0
+fi
+
+
 set -ex
 
 cd testdata
@@ -43,3 +56,7 @@ ssh-keygen -w "$SK_DUMMY" \
 	-Y sign -f ecdsa_sk -n $NAMESPACE - < signed-data > ecdsa_sk.sig
 ssh-keygen -w "$SK_DUMMY" \
 	-Y sign -f ed25519_sk -n $NAMESPACE - < signed-data > ed25519_sk.sig
+
+if ssh -Q key-plain | grep -q '^ssh-ed301@eirindeval.de$'; then
+	ed301_testdata
+fi

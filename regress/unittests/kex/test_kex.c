@@ -18,6 +18,7 @@
 
 #include "ssherr.h"
 #include "ssh_api.h"
+#include "crypto_api.h"
 #include "sshbuf.h"
 #include "packet.h"
 #include "myproposal.h"
@@ -220,6 +221,13 @@ do_kex(char *kex)
 	do_kex_with_key(kex, NULL, NULL, NULL, KEY_ECDSA, 256);
 #endif /* WITH_OPENSSL */
 	do_kex_with_key(kex, NULL, NULL, NULL, KEY_ED25519, 256);
+#ifdef WITH_ED301
+	if (ssh_ed301_available())
+		do_kex_with_key(kex, NULL, NULL, NULL, KEY_ED301, 304);
+	else
+		fprintf(stderr, "SKIP Ed301 host-key KEX test: "
+		    "provider unavailable\n");
+#endif
 }
 
 void

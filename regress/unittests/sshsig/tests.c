@@ -25,6 +25,7 @@
 #include "ssherr.h"
 #include "authfile.h"
 #include "sshkey.h"
+#include "crypto_api.h"
 #include "sshbuf.h"
 #include "sshsig.h"
 #include "log.h"
@@ -106,6 +107,16 @@ tests(void)
 	TEST_START("check ECDSA signature");
 	check_sig("ecdsa.pub", "ecdsa.sig", msg, namespace);
 	TEST_DONE();
+#endif
+
+#ifdef WITH_ED301
+	if (ssh_ed301_available()) {
+		TEST_START("check ED301 signature");
+		check_sig("ed301.pub", "ed301.sig", msg, namespace);
+		TEST_DONE();
+	} else
+		fprintf(stderr, "SKIP Ed301 sshsig test: "
+		    "provider unavailable\n");
 #endif
 
 	TEST_START("check ED25519 signature");

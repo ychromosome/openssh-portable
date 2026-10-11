@@ -66,6 +66,7 @@
 #include "compat.h"
 #include "digest.h"
 #include "sshkey.h"
+#include "crypto_api.h"
 #include "authfile.h"
 #include "pathnames.h"
 #include "canohost.h"
@@ -1498,6 +1499,9 @@ main(int ac, char **av)
 	}
 
 	seed_rng();
+#ifdef WITH_ED301
+	(void)ssh_ed301_available();
+#endif
 
 	/* If requested, redirect the logs to the specified logfile. */
 	if (logfile != NULL) {
@@ -1665,6 +1669,18 @@ main(int ac, char **av)
 			sshkey_free(key);
 			continue;
 		}
+#ifdef WITH_ED301
+		if (pubkey != NULL &&
+		    sshkey_type_plain(pubkey->type) == KEY_ED301 &&
+		    !ssh_ed301_available()) {
+			error("Skipping ED301 host key %s: "
+			    "provider unavailable",
+			    options.host_key_files[i]);
+			sshkey_free(key);
+			sshkey_free(pubkey);
+			continue;
+		}
+#endif
 		sensitive_data.host_keys[i] = key;
 		sensitive_data.host_pubkeys[i] = pubkey;
 
@@ -1686,6 +1702,9 @@ main(int ac, char **av)
 		switch (keytype) {
 		case KEY_RSA:
 		case KEY_ECDSA:
+#ifdef WITH_ED301
+		case KEY_ED301:
+#endif
 		case KEY_ED25519:
 		case KEY_MLDSA44_ED25519:
 		case KEY_ECDSA_SK:

@@ -27,6 +27,17 @@ for fmt in '' RFC4716 PKCS8 PEM; do
 		case "$fmt" in
 		PKCS8|PEM) oldfmt=1 ;;
 		esac
+		# Ed301 legacy-format support is a separate integration step.
+		if [ "$t" = "ssh-ed301@eirindeval.de" ] && [ -n "$oldfmt" ]; then
+			if ${SSHKEYGEN} -m "$fmt" -N '' -t "$t" \
+			    -f $OBJ/$t-key >$OBJ/ed301-format.log 2>&1; then
+				fail "Ed301 $fmt unexpectedly supported"
+			fi
+			grep -q "not supported" $OBJ/ed301-format.log || \
+			    fail "Ed301 $fmt did not report unsupported format"
+			rm -f $OBJ/$t-key* $OBJ/ed301-format.log
+			continue
+		fi
 		# Some key types like ssh-ed25519 and *@openssh.com are never
 		# stored in old formats.
 		case "$t" in

@@ -20,7 +20,7 @@ void mlkem_tests(void);
 void ed25519_tests(void);
 void mldsa_eddsa_tests(void);
 
-#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#ifdef WITH_ED301
 void ed301_tests(void);
 void x301_tests(void);
 struct sshbuf *get_json_array(struct sshbuf *, const char *);
@@ -114,7 +114,7 @@ get_json_string(struct sshbuf *content, const char *key, int consume)
 }
 
 
-#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#ifdef WITH_ED301
 /* Container and scalar helpers for the hash-bound Ed301/X301 vectors. */
 static size_t
 json_value_offset(struct sshbuf *content, const char *key)
@@ -252,7 +252,7 @@ get_json_hex(struct sshbuf *content, const char *key, size_t *lenp)
 	free(hex);
 	return ret;
 }
-#endif /* WITH_OPENSSL && USE_ED301 */
+#endif /* WITH_ED301 */
 
 void
 tests(void)
@@ -264,7 +264,7 @@ tests(void)
 	mlkem_tests();
 #endif
 	ed25519_tests();
-#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#ifdef WITH_ED301
 	ed301_tests();
 	x301_tests();
 #endif

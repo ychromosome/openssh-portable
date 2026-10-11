@@ -1677,6 +1677,9 @@ show_other_keys(struct hostkeys *hostkeys, struct sshkey *key)
 	int type[] = {
 		KEY_RSA,
 		KEY_ECDSA,
+#ifdef WITH_ED301
+		KEY_ED301,
+#endif
 		KEY_ED25519,
 		KEY_MLDSA44_ED25519,
 		-1

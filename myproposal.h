@@ -40,7 +40,16 @@
 	"diffie-hellman-group18-sha512," \
 	"diffie-hellman-group14-sha256"
 
+#ifdef WITH_ED301
+#define ED301_PK_ALG "ssh-ed301@eirindeval.de,"
+#define ED301_CERT_ALG "ssh-ed301-cert-v01@eirindeval.de,"
+#else
+#define ED301_PK_ALG ""
+#define ED301_CERT_ALG ""
+#endif
+
 #define	KEX_DEFAULT_PK_ALG	\
+	ED301_CERT_ALG \
 	"ssh-ed25519-cert-v01@openssh.com," \
 	"ecdsa-sha2-nistp256-cert-v01@openssh.com," \
 	"ecdsa-sha2-nistp384-cert-v01@openssh.com," \
@@ -51,6 +60,7 @@
 	"rsa-sha2-512-cert-v01@openssh.com," \
 	"rsa-sha2-256-cert-v01@openssh.com," \
 	"ssh-mldsa44-ed25519-cert," \
+	ED301_PK_ALG \
 	"ssh-ed25519," \
 	"ecdsa-sha2-nistp256," \
 	"ecdsa-sha2-nistp384," \
@@ -85,6 +95,7 @@
 
 /* Not a KEX value, but here so all the algorithm defaults are together */
 #define	SSH_ALLOWED_CA_SIGALGS	\
+	ED301_PK_ALG \
 	"ssh-ed25519," \
 	"ecdsa-sha2-nistp256," \
 	"ecdsa-sha2-nistp384," \

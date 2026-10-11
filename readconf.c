@@ -2932,6 +2932,10 @@ fill_default_options(Options * options)
 		add_identity_file(options, "~/", _PATH_SSH_CLIENT_ID_ECDSA, 0);
 		add_identity_file(options, "~/",
 		    _PATH_SSH_CLIENT_ID_ECDSA_SK, 0);
+#ifdef WITH_ED301
+		add_identity_file(options, "~/",
+		    _PATH_SSH_CLIENT_ID_ED301, 0);
+#endif
 		add_identity_file(options, "~/",
 		    _PATH_SSH_CLIENT_ID_ED25519, 0);
 		add_identity_file(options, "~/",

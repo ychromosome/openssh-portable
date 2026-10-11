@@ -16,7 +16,7 @@
 
 #include "includes.h"
 
-#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#ifdef WITH_ED301
 
 #include <sys/types.h>
 
@@ -281,4 +281,4 @@ crypto_sign_ed301_verify_detached(const unsigned char *sig,
 	return crypto_sign_ed301_verify_detached_ctx(sig, m, mlen, NULL, 0, pk);
 }
 
-#endif /* WITH_OPENSSL && USE_ED301 */
+#endif /* WITH_ED301 */

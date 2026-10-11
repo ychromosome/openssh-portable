@@ -3,6 +3,29 @@
 
 PW=mekmitasdigoat
 
+ed301_testdata() {
+	ssh-keygen -t ed301 -C "ED301 test key #1" -N "" -f ed301_1
+	ssh-keygen -t ed301 -C "ED301 test key #2" -N "" -f ed301_2
+	cp ed301_1 ed301_1_pw
+	ssh-keygen -p -f ed301_1_pw -P "" -N "$PW"
+	ssh-keygen -s ed301_2 -I julius -n host1,host2 -h \
+	    -V 19990101:20110101 -z 8 ed301_1.pub
+	for key in ed301_1 ed301_2; do
+		ssh-keygen -l -f "$key" | awk '{print $2}' > "$key.fp"
+		ssh-keygen -B -f "$key" | awk '{print $2}' > "$key.fp.bb"
+	done
+	ssh-keygen -l -f ed301_1-cert.pub | awk '{print $2}' \
+	    > ed301_1-cert.fp
+}
+
+if [ "${1:-}" = ed301 ]; then
+	set -e
+	cd testdata
+	ed301_testdata
+	exit 0
+fi
+
+
 rsa_params() {
 	_in="$1"
 	_outbase="$2"
@@ -193,3 +216,7 @@ ssh-keygen -Bf ecdsa_sk2 | awk '{print $2}' > ecdsa_sk2.fp.bb
 ssh-keygen -Bf ed25519_sk2 | awk '{print $2}' > ed25519_sk2.fp.bb
 
 echo "$PW" > pw
+
+if ssh -Q key-plain | grep -q '^ssh-ed301@eirindeval.de$'; then
+	ed301_testdata
+fi

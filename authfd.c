@@ -606,7 +606,13 @@ ssh_add_identity_constrained(int sock, struct sshkey *key,
 	case KEY_ECDSA_SK:
 	case KEY_ECDSA_SK_CERT:
 #endif
+#ifdef WITH_ED301
+	case KEY_ED301:
+#endif
 	case KEY_ED25519:
+#ifdef WITH_ED301
+	case KEY_ED301_CERT:
+#endif
 	case KEY_ED25519_CERT:
 	case KEY_MLDSA44_ED25519:
 	case KEY_MLDSA44_ED25519_CERT:

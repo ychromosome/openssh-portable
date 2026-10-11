@@ -38,11 +38,14 @@ secondary="$primary"
 
 trace "prepare hostkeys"
 nkeys=0
-all_algs=""
+# The first strict connection must use the key already in known_hosts.
+# ssh -Q may prefer an algorithm that this test has not learned yet.
+all_algs="$primary"
 for k in $SSH_HOSTKEY_TYPES; do
 	${SSHKEYGEN} -qt $k -f $OBJ/hkr.$k -N '' || fatal "ssh-keygen $k"
 	echo "Hostkey $OBJ/hkr.${k}" >> $OBJ/sshd_proxy.orig
 	nkeys=`expr $nkeys + 1`
+	test "$k" = "$primary" && continue
 	test "x$all_algs" = "x" || all_algs="${all_algs},"
 	case "$k" in
 	ssh-rsa)

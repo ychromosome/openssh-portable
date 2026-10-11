@@ -101,7 +101,7 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
 	msg.o dns.o entropy.o gss-genr.o umac.o umac128.o \
 	smult_curve25519_ref.o \
 	poly1305.o chacha.o cipher-chachapoly.o cipher-chachapoly-libcrypto.o \
-	ssh-ed25519.o digest-openssl.o digest-libc.o \
+	ssh-ed301.o ssh-ed25519.o digest-openssl.o digest-libc.o \
 	libcrux-mlkem-mldsa.o ssh-mldsa-eddsa.o \
 	hmac.o ed25519.o ed25519-openssl.o ed301-openssl.o x301-openssl.o \
 	kex.o kex-names.o kexdh.o kexgex.o kexecdh.o kexc25519.o \
@@ -189,6 +189,7 @@ PATHSUBS	= \
 	-e 's|/etc/ssh/ssh_host_key|$(sysconfdir)/ssh_host_key|g' \
 	-e 's|/etc/ssh/ssh_host_ecdsa_key|$(sysconfdir)/ssh_host_ecdsa_key|g' \
 	-e 's|/etc/ssh/ssh_host_rsa_key|$(sysconfdir)/ssh_host_rsa_key|g' \
+	-e 's|/etc/ssh/ssh_host_ed301_key|$(sysconfdir)/ssh_host_ed301_key|g' \
 	-e 's|/etc/ssh/ssh_host_ed25519_key|$(sysconfdir)/ssh_host_ed25519_key|g' \
 	-e 's|/var/run/sshd.pid|$(piddir)/sshd.pid|g' \
 	-e 's|/etc/moduli|$(sysconfdir)/moduli|g' \
@@ -497,6 +498,9 @@ host-key: ssh-keygen$(EXEEXT)
 
 host-key-force: ssh-keygen$(EXEEXT) ssh$(EXEEXT)
 	./ssh-keygen -t rsa -f $(DESTDIR)$(sysconfdir)/ssh_host_rsa_key -N ""
+	if ./ssh -Q key | grep '^ssh-ed301@eirindeval.de$$' >/dev/null; then \
+		./ssh-keygen -t ed301 -f $(DESTDIR)$(sysconfdir)/ssh_host_ed301_key -N ""; \
+	fi
 	./ssh-keygen -t ed25519 -f $(DESTDIR)$(sysconfdir)/ssh_host_ed25519_key -N ""
 	if ./ssh -Q key | grep ecdsa >/dev/null ; then \
 		./ssh-keygen -t ecdsa -f $(DESTDIR)$(sysconfdir)/ssh_host_ecdsa_key -N ""; \

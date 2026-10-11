@@ -88,6 +88,10 @@ static int sshkey_from_blob_internal(struct sshbuf *buf,
     const char *alg_allowlist, const char *ca_sigalg_allowlist);
 
 /* Supported key types */
+#ifdef WITH_ED301
+extern const struct sshkey_impl sshkey_ed301_impl;
+extern const struct sshkey_impl sshkey_ed301_cert_impl;
+#endif
 extern const struct sshkey_impl sshkey_ed25519_impl;
 extern const struct sshkey_impl sshkey_ed25519_cert_impl;
 extern const struct sshkey_impl sshkey_ed25519_sk_impl;
@@ -118,7 +122,13 @@ extern const struct sshkey_impl sshkey_rsa_sha512_cert_impl;
 #endif /* WITH_OPENSSL */
 
 const struct sshkey_impl * const keyimpls[] = {
+#ifdef WITH_ED301
+	&sshkey_ed301_impl,
+#endif
 	&sshkey_ed25519_impl,
+#ifdef WITH_ED301
+	&sshkey_ed301_cert_impl,
+#endif
 	&sshkey_ed25519_cert_impl,
 #ifdef ENABLE_SK
 	&sshkey_ed25519_sk_impl,
@@ -331,6 +341,11 @@ sshkey_alg_list(int certs_only, int plain_only, int include_sigonly, char sep)
 		impl = keyimpls[i];
 		if (impl->name == NULL)
 			continue;
+#ifdef WITH_ED301
+		if ((impl->type == KEY_ED301 || impl->type == KEY_ED301_CERT) &&
+		    !ssh_ed301_available())
+			continue;
+#endif
 		if (!include_sigonly && impl->sigonly)
 			continue;
 		if ((certs_only && !impl->cert) || (plain_only && impl->cert))
@@ -439,6 +454,10 @@ sshkey_type_plain(int type)
 		return KEY_ECDSA;
 	case KEY_ECDSA_SK_CERT:
 		return KEY_ECDSA_SK;
+#ifdef WITH_ED301
+	case KEY_ED301_CERT:
+		return KEY_ED301;
+#endif
 	case KEY_ED25519_CERT:
 		return KEY_ED25519;
 	case KEY_MLDSA44_ED25519_CERT:
@@ -461,6 +480,10 @@ sshkey_type_certified(int type)
 		return KEY_ECDSA_CERT;
 	case KEY_ECDSA_SK:
 		return KEY_ECDSA_SK_CERT;
+#ifdef WITH_ED301
+	case KEY_ED301:
+		return KEY_ED301_CERT;
+#endif
 	case KEY_ED25519:
 		return KEY_ED25519_CERT;
 	case KEY_MLDSA44_ED25519:
@@ -2639,6 +2662,9 @@ sshkey_private_deserialize(struct sshbuf *buf, struct sshkey **kp)
 	char *tname = NULL;
 	char *expect_sk_application = NULL;
 	u_char *expect_ed25519_pk = NULL;
+#ifdef WITH_ED301
+	u_char *expect_ed301_pk = NULL;
+#endif
 	struct sshkey *k = NULL;
 	int type, r = SSH_ERR_INTERNAL_ERROR;
 
@@ -2671,6 +2697,10 @@ sshkey_private_deserialize(struct sshbuf *buf, struct sshkey **kp)
 		 */
 		expect_sk_application = k->sk_application;
 		expect_ed25519_pk = k->ed25519_pk;
+#ifdef WITH_ED301
+		expect_ed301_pk = k->ed301_pk;
+		k->ed301_pk = NULL;
+#endif
 		k->sk_application = NULL;
 		k->ed25519_pk = NULL;
 	} else {
@@ -2693,6 +2723,13 @@ sshkey_private_deserialize(struct sshbuf *buf, struct sshkey **kp)
 		r = SSH_ERR_KEY_CERT_MISMATCH;
 		goto out;
 	}
+#ifdef WITH_ED301
+	if (expect_ed301_pk != NULL && (k->ed301_pk == NULL ||
+	    timingsafe_bcmp(expect_ed301_pk, k->ed301_pk, ED301_PK_SZ) != 0)) {
+		r = SSH_ERR_KEY_CERT_MISMATCH;
+		goto out;
+	}
+#endif
 	/* success */
 	r = 0;
 	if (kp != NULL) {
@@ -2704,6 +2741,9 @@ sshkey_private_deserialize(struct sshbuf *buf, struct sshkey **kp)
 	sshkey_free(k);
 	free(expect_sk_application);
 	free(expect_ed25519_pk);
+#ifdef WITH_ED301
+	freezero(expect_ed301_pk, ED301_PK_SZ);
+#endif
 	return r;
 }
 
@@ -3416,6 +3456,13 @@ sshkey_private_to_fileblob(struct sshkey *key, struct sshbuf *blob,
     int format, const char *openssh_format_cipher, int openssh_format_rounds)
 {
 	switch (key->type) {
+#ifdef WITH_ED301
+	case KEY_ED301:
+		if (format != SSHKEY_PRIVATE_OPENSSH)
+			return SSH_ERR_FEATURE_UNSUPPORTED;
+		return sshkey_private_to_blob2(key, blob, passphrase,
+		    comment, openssh_format_cipher, openssh_format_rounds);
+#endif
 #ifdef WITH_OPENSSL
 	case KEY_ECDSA:
 	case KEY_RSA:

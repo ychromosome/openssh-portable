@@ -16,7 +16,7 @@
 
 #include "includes.h"
 
-#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#ifdef WITH_ED301
 
 #include <sys/types.h>
 
@@ -185,4 +185,4 @@ crypto_x301_shared(unsigned char *shared, const unsigned char *secret,
 	return ret;
 }
 
-#endif /* WITH_OPENSSL && USE_ED301 */
+#endif /* WITH_ED301 */

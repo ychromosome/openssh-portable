@@ -11,6 +11,7 @@ ktypes=""
 for i in ${SSH_KEYTYPES}; do
 	case "$i" in
 		ssh-rsa)		ktypes="$ktypes rsa-2048 rsa-3072" ;;
+		ssh-ed301@eirindeval.de) ktypes="$ktypes ed301-304" ;;
 		ssh-ed25519)		ktypes="$ktypes ed25519-512" ;;
 		ecdsa-sha2-nistp256)	ktypes="$ktypes ecdsa-256" ;;
 		ecdsa-sha2-nistp384)	ktypes="$ktypes ecdsa-384" ;;
@@ -39,6 +40,7 @@ kname_to_ktype() {
 	ecdsa-256)	echo ecdsa-sha2-nistp256;;
 	ecdsa-384)	echo ecdsa-sha2-nistp384;;
 	ecdsa-521)	echo ecdsa-sha2-nistp521;;
+	ed301-304)	echo ssh-ed301@eirindeval.de;;
 	ed25519-512)	echo ssh-ed25519;;
 	rsa-*)		echo rsa-sha2-512,rsa-sha2-256,ssh-rsa;;
 	ed25519-sk)	echo sk-ssh-ed25519@openssh.com;;

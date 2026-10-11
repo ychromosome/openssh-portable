@@ -67,10 +67,20 @@ int ssh_port = SSH_DEFAULT_PORT;
 #define KT_MLDSA44_ED25519 (1<<6)
 
 #define KT_MIN		KT_RSA
+#ifdef WITH_ED301
+#define KT_ED301	(1<<7)
+#define KT_MAX		KT_ED301
+#else
 #define KT_MAX		KT_MLDSA44_ED25519
+#endif
 
 int get_cert = 0;
-int get_keytypes = KT_RSA|KT_ECDSA|KT_ED25519|KT_ECDSA_SK|KT_ED25519_SK|KT_MLDSA44_ED25519;
+int get_keytypes = KT_RSA|KT_ECDSA|KT_ED25519|KT_ECDSA_SK|
+    KT_ED25519_SK|KT_MLDSA44_ED25519
+#ifdef WITH_ED301
+    |KT_ED301
+#endif
+    ;
 
 int hash_hosts = 0;		/* Hash hostname on output */
 
@@ -248,6 +258,13 @@ keygrab_ssh2(con *c)
 		    "rsa-sha2-256,"
 		    "ssh-rsa";
 		break;
+#ifdef WITH_ED301
+	case KT_ED301:
+		myproposal[PROPOSAL_SERVER_HOST_KEY_ALGS] = get_cert ?
+		    "ssh-ed301-cert-v01@eirindeval.de" :
+		    "ssh-ed301@eirindeval.de";
+		break;
+#endif
 	case KT_ED25519:
 		myproposal[PROPOSAL_SERVER_HOST_KEY_ALGS] = get_cert ?
 		    "ssh-ed25519-cert-v01@openssh.com" : "ssh-ed25519";
@@ -753,6 +770,11 @@ main(int argc, char **argv)
 				case KEY_RSA:
 					get_keytypes |= KT_RSA;
 					break;
+#ifdef WITH_ED301
+				case KEY_ED301:
+					get_keytypes |= KT_ED301;
+					break;
+#endif
 				case KEY_ED25519:
 					get_keytypes |= KT_ED25519;
 					break;

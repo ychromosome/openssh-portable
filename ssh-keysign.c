@@ -177,7 +177,11 @@ main(int argc, char **argv)
 {
 	struct sshbuf *b;
 	Options options;
+#ifdef WITH_ED301
+#define NUM_KEYTYPES 6
+#else
 #define NUM_KEYTYPES 5
+#endif
 	struct sshkey *keys[NUM_KEYTYPES], *key = NULL;
 	struct passwd *pw;
 	int r, key_fd[NUM_KEYTYPES], i, found, version = 2, fd;
@@ -201,6 +205,9 @@ main(int argc, char **argv)
 	i = 0;
 	/* XXX This really needs to read sshd_config for the paths */
 	key_fd[i++] = open(_PATH_HOST_ECDSA_KEY_FILE, O_RDONLY);
+#ifdef WITH_ED301
+	key_fd[i++] = open(_PATH_HOST_ED301_KEY_FILE, O_RDONLY);
+#endif
 	key_fd[i++] = open(_PATH_HOST_ED25519_KEY_FILE, O_RDONLY);
 	key_fd[i++] = open(_PATH_HOST_RSA_KEY_FILE, O_RDONLY);
 	key_fd[i++] = open(_PATH_HOST_MLDSA44_ED25519_KEY_FILE, O_RDONLY);

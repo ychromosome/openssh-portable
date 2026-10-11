@@ -28,6 +28,7 @@
 #include "ssherr.h"
 #include "authfile.h"
 #include "sshkey.h"
+#include "crypto_api.h"
 #include "sshbuf.h"
 
 #include "common.h"
@@ -362,6 +363,62 @@ sshkey_fuzz_tests(void)
 	sig_fuzz(k1, NULL);
 	sshkey_free(k1);
 	TEST_DONE();
+
+#ifdef WITH_ED301
+	if (ssh_ed301_available()) {
+		TEST_START("fuzz Ed301 private");
+		buf = load_file("ed301_1");
+		fuzz = fuzz_begin(FUZZ_BASE64, sshbuf_mutable_ptr(buf),
+		    sshbuf_len(buf));
+		ASSERT_INT_EQ(sshkey_parse_private_fileblob(buf, "",
+		    &k1, NULL), 0);
+		sshkey_free(k1);
+		sshbuf_free(buf);
+		ASSERT_PTR_NE(fuzzed = sshbuf_new(), NULL);
+		TEST_ONERROR(onerror, fuzz);
+		for(i = 0; !fuzz_done(fuzz); i++, fuzz_next(fuzz)) {
+			r = sshbuf_put(fuzzed, fuzz_ptr(fuzz), fuzz_len(fuzz));
+			ASSERT_INT_EQ(r, 0);
+			if (sshkey_parse_private_fileblob(fuzzed, "",
+			    &k1, NULL) == 0)
+				sshkey_free(k1);
+			sshbuf_reset(fuzzed);
+			if (test_is_fast() && i >= NUM_FAST_BASE64_TESTS)
+				break;
+		}
+		sshbuf_free(fuzzed);
+		fuzz_cleanup(fuzz);
+		TEST_DONE();
+
+		TEST_START("fuzz Ed301 public");
+		buf = load_file("ed301_1");
+		ASSERT_INT_EQ(sshkey_parse_private_fileblob(buf, "",
+		    &k1, NULL), 0);
+		sshbuf_free(buf);
+		public_fuzz(k1);
+		sshkey_free(k1);
+		TEST_DONE();
+
+		TEST_START("fuzz Ed301 cert");
+		ASSERT_INT_EQ(sshkey_load_cert(
+		    test_data_file("ed301_1"), &k1), 0);
+		public_fuzz(k1);
+		sshkey_free(k1);
+		TEST_DONE();
+
+		TEST_START("fuzz Ed301 sig");
+		buf = load_file("ed301_1");
+		ASSERT_INT_EQ(sshkey_parse_private_fileblob(buf, "",
+		    &k1, NULL), 0);
+		sshbuf_free(buf);
+		sig_fuzz(k1, NULL);
+		sshkey_free(k1);
+		TEST_DONE();
+
+	} else
+		fprintf(stderr, "SKIP Ed301 sshkey fuzz tests: "
+		    "provider unavailable\n");
+#endif
 
 /* XXX fuzz decoded new-format blobs too */
 /* XXX fuzz XMSS too */

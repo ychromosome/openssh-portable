@@ -47,6 +47,7 @@
 #include "compat.h"
 #include "cipher.h"
 #include "sshkey.h"
+#include "crypto_api.h"
 #include "kex.h"
 #include "log.h"
 #include "mac.h"
@@ -93,6 +94,9 @@ kex_proposal_populate_entries(struct ssh *ssh, char *prop[PROPOSAL_MAX],
 	const char **defprop = ssh->kex->server ? defpropserver : defpropclient;
 	u_int i;
 	char *cp;
+#ifdef WITH_ED301
+	char *filtered;
+#endif
 
 	if (prop == NULL)
 		fatal_f("proposal missing");
@@ -124,6 +128,17 @@ kex_proposal_populate_entries(struct ssh *ssh, char *prop[PROPOSAL_MAX],
 			break;
 		case PROPOSAL_SERVER_HOST_KEY_ALGS:
 			prop[i] = xstrdup(hkalgs ? hkalgs : defprop[i]);
+#ifdef WITH_ED301
+			if (!ssh_ed301_available()) {
+				filtered = match_filter_denylist(prop[i],
+				    "ssh-ed301@eirindeval.de,"
+				    "ssh-ed301-cert-v01@eirindeval.de");
+				if (filtered == NULL)
+					fatal_f("match_filter_denylist");
+				free(prop[i]);
+				prop[i] = filtered;
+			}
+#endif
 			break;
 		default:
 			prop[i] = xstrdup(defprop[i]);

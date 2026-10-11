@@ -25,6 +25,7 @@
 #include "sshbuf.h"
 #define SSHBUF_INTERNAL 1	/* access internals for testing */
 #include "sshkey.h"
+#include "crypto_api.h"
 
 #include "authfile.h"
 #include "common.h"
@@ -234,6 +235,151 @@ get_private(const char *n)
 	sshbuf_free(b);
 	return ret;
 }
+
+
+#ifdef WITH_ED301
+static void
+ed301_negative_tests(void)
+{
+	struct sshkey *key = NULL, *other = NULL, *parsed = NULL;
+	struct sshbuf *b, *file, *decoded;
+	u_char pk[ED301_PK_SZ + 1], sk[ED301_SK_SZ + 1], raw[76];
+	u_char *sig = NULL, *other_sig = NULL;
+	const u_char *sigptr;
+	const u_char msg[] = "Ed301 SSH negative checks";
+	u_char changed[sizeof(msg)];
+	size_t siglen, other_len, rawlen;
+	char *name, *encoded, *end, *base64;
+	int i;
+
+	TEST_START("Ed301 public parsing without provider validation");
+	ASSERT_PTR_NE(b = sshbuf_new(), NULL);
+	memset(pk, 0, sizeof(pk));
+	ASSERT_INT_EQ(sshbuf_put_cstring(b, "ssh-ed301@eirindeval.de"), 0);
+	ASSERT_INT_EQ(sshbuf_put_string(b, pk, ED301_PK_SZ), 0);
+	ASSERT_INT_EQ(sshkey_fromb(b, &parsed), 0);
+	ASSERT_INT_EQ(parsed->type, KEY_ED301);
+	ASSERT_INT_EQ(sshkey_names_valid2("ssh-ed301@eirindeval.de",
+	    0, 0), 1);
+	ASSERT_INT_EQ(sshkey_names_valid2("ssh-ed301*", 1, 0), 1);
+	sshkey_free(parsed);
+	parsed = NULL;
+	sshbuf_free(b);
+	TEST_DONE();
+
+	if (!ssh_ed301_available()) {
+		fprintf(stderr, "SKIP Ed301 negative crypto tests: "
+		    "provider unavailable\n");
+		return;
+	}
+	ASSERT_INT_EQ(sshkey_generate(KEY_ED301, 304, &key), 0);
+
+	TEST_START("Ed301 private public/seed consistency and lengths");
+	for (i = 0; i < 7; i++) {
+		test_subtest_info("mutation %d", i);
+		memcpy(pk, key->ed301_pk, ED301_PK_SZ);
+		memcpy(sk, key->ed301_sk, ED301_SK_SZ);
+		pk[ED301_PK_SZ] = sk[ED301_SK_SZ] = 0;
+		if (i == 0)
+			pk[0] ^= 1;
+		if (i == 1)
+			sk[crypto_sign_ed301_SEEDBYTES] ^= 1;
+		if (i == 2)
+			sk[0] ^= 1;
+		ASSERT_PTR_NE(b = sshbuf_new(), NULL);
+		ASSERT_INT_EQ(sshbuf_put_cstring(b,
+		    "ssh-ed301@eirindeval.de"), 0);
+		ASSERT_INT_EQ(sshbuf_put_string(b, pk,
+		    i == 3 ? ED301_PK_SZ - 1 :
+		    i == 4 ? ED301_PK_SZ + 1 : ED301_PK_SZ), 0);
+		ASSERT_INT_EQ(sshbuf_put_string(b, sk,
+		    i == 5 ? ED301_SK_SZ - 1 :
+		    i == 6 ? ED301_SK_SZ + 1 : ED301_SK_SZ), 0);
+		ASSERT_INT_EQ(sshkey_private_deserialize(b, &parsed),
+		    SSH_ERR_INVALID_FORMAT);
+		ASSERT_PTR_EQ(parsed, NULL);
+		sshbuf_free(b);
+	}
+	TEST_DONE();
+
+	TEST_START("Ed301 private file rejects trailing decoded data");
+	ASSERT_PTR_NE(file = sshbuf_new(), NULL);
+	ASSERT_INT_EQ(sshkey_private_to_fileblob(key, file, "", "test",
+	    SSHKEY_PRIVATE_OPENSSH, NULL, 0), 0);
+	ASSERT_PTR_NE(encoded = sshbuf_dup_string(file), NULL);
+	ASSERT_PTR_NE(end = strstr(encoded,
+	    "-----END OPENSSH PRIVATE KEY-----"), NULL);
+	*end = '\0';
+	ASSERT_PTR_NE(decoded = sshbuf_new(), NULL);
+	ASSERT_INT_EQ(sshbuf_b64tod(decoded, encoded +
+	    strlen("-----BEGIN OPENSSH PRIVATE KEY-----\n")), 0);
+	ASSERT_INT_EQ(sshbuf_put_u8(decoded, 0xa5), 0);
+	ASSERT_PTR_NE(base64 = sshbuf_dtob64_string(decoded, 0), NULL);
+	sshbuf_reset(file);
+	ASSERT_INT_EQ(sshbuf_putf(file,
+	    "-----BEGIN OPENSSH PRIVATE KEY-----\n%s\n"
+	    "-----END OPENSSH PRIVATE KEY-----\n", base64), 0);
+	ASSERT_INT_EQ(sshkey_parse_private_fileblob(file, "", &parsed,
+	    NULL), SSH_ERR_INVALID_FORMAT);
+	ASSERT_PTR_EQ(parsed, NULL);
+	freezero(encoded, strlen(encoded));
+	freezero(base64, strlen(base64));
+	sshbuf_free(file);
+	sshbuf_free(decoded);
+	TEST_DONE();
+
+	ASSERT_INT_EQ(sshkey_sign(key, &sig, &siglen, msg, sizeof(msg),
+	    NULL, NULL, NULL, 0), 0);
+	ASSERT_PTR_NE(b = sshbuf_from(sig, siglen), NULL);
+	ASSERT_INT_EQ(sshbuf_get_cstring(b, &name, NULL), 0);
+	ASSERT_INT_EQ(sshbuf_get_string_direct(b, &sigptr, &rawlen), 0);
+	ASSERT_SIZE_T_EQ(rawlen, sizeof(raw));
+	memcpy(raw, sigptr, sizeof(raw));
+	free(name);
+	sshbuf_free(b);
+
+	TEST_START("Ed301 signature names, lengths and trailing data");
+	for (i = 0; i < 4; i++) {
+		test_subtest_info("mutation %d", i);
+		ASSERT_PTR_NE(b = sshbuf_new(), NULL);
+		ASSERT_INT_EQ(sshbuf_put_cstring(b, i == 0 ? "ssh-ed25519" :
+		    "ssh-ed301@eirindeval.de"), 0);
+		memcpy(sk, raw, sizeof(raw));
+		sk[sizeof(raw)] = 0;
+		ASSERT_INT_EQ(sshbuf_put_string(b, sk,
+		    i == 1 ? 75 : i == 2 ? 77 : 76), 0);
+		if (i == 3)
+			ASSERT_INT_EQ(sshbuf_put_u8(b, 1), 0);
+		ASSERT_INT_EQ(sshkey_verify(key, sshbuf_ptr(b), sshbuf_len(b),
+		    msg, sizeof(msg), NULL, 0, NULL),
+		    i == 0 ? SSH_ERR_KEY_TYPE_MISMATCH :
+		    i == 3 ? SSH_ERR_UNEXPECTED_TRAILING_DATA :
+		    SSH_ERR_INVALID_FORMAT);
+		sshbuf_free(b);
+	}
+	TEST_DONE();
+
+	TEST_START("Ed301 changed message and cross-family signatures");
+	memcpy(changed, msg, sizeof(msg));
+	changed[0] ^= 1;
+	ASSERT_INT_EQ(sshkey_verify(key, sig, siglen, changed,
+	    sizeof(changed), NULL, 0, NULL), SSH_ERR_SIGNATURE_INVALID);
+	ASSERT_INT_EQ(sshkey_generate(KEY_ED25519, 256, &other), 0);
+	ASSERT_INT_EQ(sshkey_sign(other, &other_sig, &other_len, msg,
+	    sizeof(msg), NULL, NULL, NULL, 0), 0);
+	ASSERT_INT_EQ(sshkey_verify(key, other_sig, other_len, msg,
+	    sizeof(msg), NULL, 0, NULL), SSH_ERR_KEY_TYPE_MISMATCH);
+	ASSERT_INT_EQ(sshkey_verify(other, sig, siglen, msg,
+	    sizeof(msg), NULL, 0, NULL), SSH_ERR_KEY_TYPE_MISMATCH);
+	TEST_DONE();
+
+	free(sig);
+	free(other_sig);
+	sshkey_free(key);
+	sshkey_free(other);
+	explicit_bzero(sk, sizeof(sk));
+}
+#endif /* WITH_ED301 */
 
 void
 sshkey_tests(void)
@@ -618,6 +764,113 @@ sshkey_tests(void)
 	sshkey_free(k2);
 	k1 = k2 = NULL;
 	TEST_DONE();
+
+#ifdef WITH_ED301
+	if (ssh_ed301_available()) {
+		TEST_START("new/free KEY_ED301");
+		k1 = sshkey_new(KEY_ED301);
+		ASSERT_PTR_NE(k1, NULL);
+		ASSERT_PTR_EQ(k1->ed301_sk, NULL);
+		ASSERT_PTR_EQ(k1->ed301_pk, NULL);
+		sshkey_free(k1);
+		k1 = NULL;
+		TEST_DONE();
+
+		TEST_START("generate KEY_ED301");
+		ASSERT_INT_EQ(sshkey_generate(KEY_ED301, 304, &k1), 0);
+		ASSERT_INT_EQ(k1->type, KEY_ED301);
+		ASSERT_INT_EQ(sshkey_size(k1), 304);
+		ASSERT_PTR_NE(k1->ed301_pk, NULL);
+		ASSERT_PTR_NE(k1->ed301_sk, NULL);
+		TEST_DONE();
+
+		TEST_START("demote/equal KEY_ED301");
+		ASSERT_INT_EQ(sshkey_from_private(k1, &k2), 0);
+		ASSERT_PTR_NE(k1, k2);
+		ASSERT_PTR_EQ(k2->ed301_sk, NULL);
+		ASSERT_INT_EQ(sshkey_equal(k1, k2), 1);
+		sshkey_free(k1);
+		sshkey_free(k2);
+		k1 = k2 = NULL;
+		TEST_DONE();
+
+		TEST_START("equal different ED301 keys");
+		ASSERT_INT_EQ(sshkey_generate(KEY_ED301, 304, &k1), 0);
+		ASSERT_INT_EQ(sshkey_generate(KEY_ED301, 304, &k2), 0);
+		ASSERT_INT_EQ(sshkey_equal(k1, k2), 0);
+		sshkey_free(k1);
+		sshkey_free(k2);
+		k1 = k2 = NULL;
+		TEST_DONE();
+		TEST_START("certify key ED301");
+		ASSERT_INT_EQ(sshkey_load_public(test_data_file("ed301_1.pub"),
+		    &k1, NULL), 0);
+		k2 = get_private("ed301_2");
+		ASSERT_INT_EQ(sshkey_to_certified(k1), 0);
+		ASSERT_PTR_NE(k1->cert, NULL);
+		k1->cert->type = SSH2_CERT_TYPE_USER;
+		k1->cert->serial = 1234;
+		k1->cert->key_id = strdup("estragon");
+		ASSERT_PTR_NE(k1->cert->key_id, NULL);
+		k1->cert->principals = calloc(4, sizeof(*k1->cert->principals));
+		ASSERT_PTR_NE(k1->cert->principals, NULL);
+		k1->cert->principals[0] = strdup("estragon");
+		k1->cert->principals[1] = strdup("vladimir");
+		k1->cert->principals[2] = strdup("pozzo");
+		k1->cert->principals[3] = strdup("lucky");
+		ASSERT_PTR_NE(k1->cert->principals[0], NULL);
+		ASSERT_PTR_NE(k1->cert->principals[1], NULL);
+		ASSERT_PTR_NE(k1->cert->principals[2], NULL);
+		ASSERT_PTR_NE(k1->cert->principals[3], NULL);
+		k1->cert->nprincipals = 4;
+		k1->cert->valid_after = 0;
+		k1->cert->valid_before = (uint64_t)-1;
+		sshbuf_free(k1->cert->critical);
+		k1->cert->critical = sshbuf_new();
+		ASSERT_PTR_NE(k1->cert->critical, NULL);
+		sshbuf_free(k1->cert->extensions);
+		k1->cert->extensions = sshbuf_new();
+		ASSERT_PTR_NE(k1->cert->extensions, NULL);
+		put_opt(k1->cert->critical, "force-command", "/usr/bin/true");
+		put_opt(k1->cert->critical, "source-address", "127.0.0.1");
+		put_opt(k1->cert->extensions, "permit-X11-forwarding", NULL);
+		put_opt(k1->cert->extensions, "permit-agent-forwarding", NULL);
+		ASSERT_INT_EQ(sshkey_from_private(k2,
+		    &k1->cert->signature_key), 0);
+		ASSERT_INT_EQ(sshkey_certify(k1, k2, NULL, NULL, NULL), 0);
+		b = sshbuf_new();
+		ASSERT_PTR_NE(b, NULL);
+		ASSERT_INT_EQ(sshkey_putb(k1, b), 0);
+		ASSERT_INT_EQ(sshkey_from_blob(sshbuf_ptr(b), sshbuf_len(b),
+		    &k3), 0);
+
+		sshkey_free(k1);
+		sshkey_free(k2);
+		sshkey_free(k3);
+		k1 = k2 = k3 = NULL;
+		sshbuf_reset(b);
+		TEST_DONE();
+
+		TEST_START("sign and verify ED301");
+		k1 = get_private("ed301_1");
+		ASSERT_INT_EQ(sshkey_load_public(
+		    test_data_file("ed301_2.pub"), &k2,
+		    NULL), 0);
+		signature_tests(k1, k2, NULL);
+		sshkey_free(k1);
+		sshkey_free(k2);
+		k1 = k2 = NULL;
+		TEST_DONE();
+
+	} else
+		fprintf(stderr, "SKIP Ed301 sshkey tests: "
+		    "provider unavailable\n");
+#endif
+
+
+#ifdef WITH_ED301
+	ed301_negative_tests();
+#endif
 
 #ifdef WITH_OPENSSL
 	TEST_START("nested certificate");

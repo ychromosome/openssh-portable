@@ -69,7 +69,7 @@ int	crypto_sign_ed25519_keypair(unsigned char *, unsigned char *);
 int	crypto_sign_ed25519_seed_keypair(unsigned char *, unsigned char *,
     const unsigned char *);
 
-#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#ifdef WITH_ED301
 #define crypto_sign_ed301_SECRETKEYBYTES 76U /* seed (38) || pk (38) */
 #define crypto_sign_ed301_PUBLICKEYBYTES 38U
 #define crypto_sign_ed301_SEEDBYTES 38U
@@ -100,7 +100,7 @@ int	crypto_x301_shared(unsigned char *, const unsigned char *,
     const unsigned char *);
 int	ssh_ed301_available(void);
 int	ssh_x301_available(void);
-#endif /* WITH_OPENSSL && USE_ED301 */
+#endif /* WITH_ED301 */
 
 #define crypto_kem_sntrup761_PUBLICKEYBYTES 1158
 #define crypto_kem_sntrup761_SECRETKEYBYTES 1763

@@ -1731,7 +1731,7 @@ main(int ac, char **av)
 	if (options.hostbased_authentication) {
 		int loaded = 0;
 
-		sensitive_data.nkeys = 10;
+		sensitive_data.nkeys = 12;
 		sensitive_data.keys = xcalloc(sensitive_data.nkeys,
 		    sizeof(*sensitive_data.keys));
 
@@ -1759,13 +1759,19 @@ main(int ac, char **av)
 
 		if (options.hostbased_authentication == 1) {
 			L_CERT(_PATH_HOST_ECDSA_KEY_FILE, 0);
-			L_CERT(_PATH_HOST_ED25519_KEY_FILE, 1);
-			L_CERT(_PATH_HOST_RSA_KEY_FILE, 2);
-			L_CERT(_PATH_HOST_MLDSA44_ED25519_KEY_FILE, 3);
-			L_PUBKEY(_PATH_HOST_ECDSA_KEY_FILE, 4);
-			L_PUBKEY(_PATH_HOST_ED25519_KEY_FILE, 5);
-			L_PUBKEY(_PATH_HOST_RSA_KEY_FILE, 6);
-			L_PUBKEY(_PATH_HOST_MLDSA44_ED25519_KEY_FILE, 7);
+#ifdef WITH_ED301
+			L_CERT(_PATH_HOST_ED301_KEY_FILE, 1);
+#endif
+			L_CERT(_PATH_HOST_ED25519_KEY_FILE, 2);
+			L_CERT(_PATH_HOST_RSA_KEY_FILE, 3);
+			L_CERT(_PATH_HOST_MLDSA44_ED25519_KEY_FILE, 4);
+			L_PUBKEY(_PATH_HOST_ECDSA_KEY_FILE, 5);
+#ifdef WITH_ED301
+			L_PUBKEY(_PATH_HOST_ED301_KEY_FILE, 6);
+#endif
+			L_PUBKEY(_PATH_HOST_ED25519_KEY_FILE, 7);
+			L_PUBKEY(_PATH_HOST_RSA_KEY_FILE, 8);
+			L_PUBKEY(_PATH_HOST_MLDSA44_ED25519_KEY_FILE, 9);
 			if (loaded == 0)
 				debug("HostbasedAuthentication enabled but no "
 				   "local public host keys could be loaded.");

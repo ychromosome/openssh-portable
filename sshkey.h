@@ -63,6 +63,8 @@ enum sshkey_types {
 	KEY_ED25519_SK_CERT,
 	KEY_MLDSA44_ED25519,
 	KEY_MLDSA44_ED25519_CERT,
+	KEY_ED301,
+	KEY_ED301_CERT,
 	KEY_UNSPEC
 };
 
@@ -120,6 +122,9 @@ struct sshkey {
 	/* KEY_ED25519 and KEY_ED25519_SK */
 	u_char	*ed25519_sk;
 	u_char	*ed25519_pk;
+	/* KEY_ED301 */
+	u_char	*ed301_sk;
+	u_char	*ed301_pk;
 	/* KEY_MLDSA44_ED25519 */
 	u_char	*mldsa_ed25519_sk;
 	u_char	*mldsa_ed25519_pk;
@@ -136,6 +141,9 @@ struct sshkey {
 	u_char	*shield_prekey;
 	size_t	shield_prekey_len;
 };
+
+#define	ED301_SK_SZ	crypto_sign_ed301_SECRETKEYBYTES
+#define	ED301_PK_SZ	crypto_sign_ed301_PUBLICKEYBYTES
 
 #define	ED25519_SK_SZ	crypto_sign_ed25519_SECRETKEYBYTES
 #define	ED25519_PK_SZ	crypto_sign_ed25519_PUBLICKEYBYTES
@@ -304,6 +312,10 @@ int	ssh_rsa_encode_store_sig(int, const u_char *, size_t,
 	    u_char **, size_t *);
 int	ssh_ecdsa_encode_store_sig(const struct sshkey *,
 	    const BIGNUM *, const BIGNUM *, u_char **, size_t *);
+#ifdef WITH_ED301
+int	ssh_ed301_encode_store_sig(const u_char *, size_t, u_char **, size_t *);
+#endif
+
 int	ssh_ed25519_encode_store_sig(const u_char *, size_t,
 	    u_char **, size_t *);
 /* XXX should be internal, but used by ssh-keygen */

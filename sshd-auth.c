@@ -72,6 +72,7 @@
 #include "cipher.h"
 #include "digest.h"
 #include "sshkey.h"
+#include "crypto_api.h"
 #include "kex.h"
 #include "authfile.h"
 #include "pathnames.h"
@@ -248,6 +249,9 @@ list_hostkey_types(void)
 			append_hostkey_type(b, "rsa-sha2-256");
 			/* FALLTHROUGH */
 		case KEY_ECDSA:
+#ifdef WITH_ED301
+		case KEY_ED301:
+#endif
 		case KEY_ED25519:
 		case KEY_MLDSA44_ED25519:
 		case KEY_ECDSA_SK:
@@ -268,6 +272,9 @@ list_hostkey_types(void)
 			    "rsa-sha2-256-cert-v01@openssh.com");
 			/* FALLTHROUGH */
 		case KEY_ECDSA_CERT:
+#ifdef WITH_ED301
+		case KEY_ED301_CERT:
+#endif
 		case KEY_ED25519_CERT:
 		case KEY_MLDSA44_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
@@ -293,6 +300,9 @@ get_hostkey_public_by_type(int type, int nid, struct ssh *ssh)
 		switch (type) {
 		case KEY_RSA_CERT:
 		case KEY_ECDSA_CERT:
+#ifdef WITH_ED301
+		case KEY_ED301_CERT:
+#endif
 		case KEY_ED25519_CERT:
 		case KEY_MLDSA44_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
@@ -464,6 +474,9 @@ main(int ac, char **av)
 	saved_argv[i] = NULL;
 
 	seed_rng();
+#ifdef WITH_ED301
+	(void)ssh_ed301_available();
+#endif
 
 #ifndef HAVE_SETPROCTITLE
 	/* Prepare for later setproctitle emulation */

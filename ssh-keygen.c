@@ -42,6 +42,7 @@
 
 #include "xmalloc.h"
 #include "sshkey.h"
+#include "crypto_api.h"
 #include "authfile.h"
 #include "sshbuf.h"
 #include "pathnames.h"
@@ -261,6 +262,12 @@ ask_filename(struct passwd *pw, const char *prompt)
 		case KEY_RSA:
 			name = _PATH_SSH_CLIENT_ID_RSA;
 			break;
+#ifdef WITH_ED301
+		case KEY_ED301:
+		case KEY_ED301_CERT:
+			name = _PATH_SSH_CLIENT_ID_ED301;
+			break;
+#endif
 		case KEY_ED25519:
 		case KEY_ED25519_CERT:
 			name = _PATH_SSH_CLIENT_ID_ED25519;
@@ -1040,6 +1047,9 @@ do_gen_all_hostkeys(struct passwd *pw)
 		{ "rsa", "RSA" ,_PATH_HOST_RSA_KEY_FILE },
 		{ "ecdsa", "ECDSA",_PATH_HOST_ECDSA_KEY_FILE },
 #endif /* WITH_OPENSSL */
+#ifdef WITH_ED301
+		{ "ed301", "ED301", _PATH_HOST_ED301_KEY_FILE },
+#endif
 		{ "ed25519", "ED25519",_PATH_HOST_ED25519_KEY_FILE },
 #ifdef USE_MLDSA
 		{ "mldsa44-ed25519", "MLDSA44-ED25519",
@@ -1056,6 +1066,13 @@ do_gen_all_hostkeys(struct passwd *pw)
 	int i, type, fd, r;
 
 	for (i = 0; key_types[i].key_type; i++) {
+#ifdef WITH_ED301
+		if (strcmp(key_types[i].key_type, "ed301") == 0 &&
+		    !ssh_ed301_available()) {
+			error("Skipping ED301 host key: provider unavailable");
+			continue;
+		}
+#endif
 		public = private = NULL;
 		prv_tmp = pub_tmp = prv_file = pub_file = NULL;
 
@@ -1573,6 +1590,9 @@ do_change_comment(struct passwd *pw, const char *identity_comment)
 	}
 
 	if (private->type != KEY_ED25519 &&
+#ifdef WITH_ED301
+	    private->type != KEY_ED301 &&
+#endif
 	    private_key_format != SSHKEY_PRIVATE_OPENSSH) {
 		error("Comments are only supported for keys stored in "
 		    "the new format (-o).");
@@ -3304,7 +3324,8 @@ usage(void)
 	fprintf(stderr,
 	    "usage: ssh-keygen [-q] [-a rounds] [-b bits] [-C comment] [-f output_keyfile]\n"
 	    "                  [-m format] [-N new_passphrase] [-O option]\n"
-	    "                  [-t ecdsa|ecdsa-sk|ed25519|ed25519-sk|mldsa44-ed25519|rsa]\n"
+	    "                  [-t ecdsa|ecdsa-sk|ed301|ed25519|"
+	    "ed25519-sk|mldsa44-ed25519|rsa]\n"
 	    "                  [-w provider] [-Z cipher]\n"
 	    "       ssh-keygen -p [-a rounds] [-f keyfile] [-m format] [-N new_passphrase]\n"
 	    "                   [-P old_passphrase] [-Z cipher]\n"
@@ -3840,6 +3861,10 @@ main(int argc, char **argv)
 		key_type_name = DEFAULT_KEY_TYPE_NAME;
 
 	type = sshkey_type_from_shortname(key_type_name);
+#ifdef WITH_ED301
+	if (type == KEY_ED301 && !ssh_ed301_available())
+		fatal("Ed301 provider unavailable in default OpenSSL context");
+#endif
 	type_bits_valid(type, key_type_name, &bits);
 
 	if (!quiet)

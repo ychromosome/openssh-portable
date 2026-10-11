@@ -1,6 +1,8 @@
 #	$OpenBSD: knownhosts-command.sh,v 1.5 2026/06/14 04:08:05 djm Exp $
 #	Placed in the Public Domain.
 
+# Ed301 participates through SSH_KEYTYPES from ssh -Q key-plain.
+
 tid="known hosts command "
 
 rm -f $OBJ/knownhosts_command $OBJ/ssh_proxy_khc

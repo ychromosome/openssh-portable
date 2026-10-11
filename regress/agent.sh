@@ -1,6 +1,8 @@
 #	$OpenBSD: agent.sh,v 1.27 2026/08/03 06:53:11 djm Exp $
 #	Placed in the Public Domain.
 
+# Ed301 participates through SSH_KEYTYPES from ssh -Q key-plain.
+
 tid="simple agent test"
 
 SSH_AUTH_SOCK=/nonexistent ${SSHADD} -l > /dev/null 2>&1

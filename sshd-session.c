@@ -72,6 +72,7 @@
 #include "cipher.h"
 #include "digest.h"
 #include "sshkey.h"
+#include "crypto_api.h"
 #include "kex.h"
 #include "authfile.h"
 #include "pathnames.h"
@@ -422,6 +423,9 @@ get_hostkey_by_type(int type, int nid, int need_private, struct ssh *ssh)
 		switch (type) {
 		case KEY_RSA_CERT:
 		case KEY_ECDSA_CERT:
+#ifdef WITH_ED301
+		case KEY_ED301_CERT:
+#endif
 		case KEY_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
 		case KEY_ED25519_SK_CERT:
@@ -945,6 +949,9 @@ main(int ac, char **av)
 	}
 
 	seed_rng();
+#ifdef WITH_ED301
+	(void)ssh_ed301_available();
+#endif
 
 	/* If requested, redirect the logs to the specified logfile. */
 	if (logfile != NULL) {

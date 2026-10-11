@@ -1,6 +1,8 @@
 #	$OpenBSD: cert-hostkey.sh,v 1.32 2026/06/14 04:08:05 djm Exp $
 #	Placed in the Public Domain.
 
+# Ed301 participates through SSH_KEYTYPES from ssh -Q key-plain.
+
 tid="certified host keys"
 
 rm -f $OBJ/known_hosts-cert* $OBJ/host_ca_key* $OBJ/host_revoked_*
@@ -73,6 +75,7 @@ cat $OBJ/host_ca_key.pub $OBJ/host_ca_key2.pub > $OBJ/host_revoked_ca
 PLAIN_TYPES=""
 for i in $SSH_KEYTYPES; do
 	case "$i" in
+	ssh-ed301@eirindeval.de) t="ed301" ;;
 	*@openssh.com*)	t="$i" ;;
 	*)		t=`echo "$i" | sed 's/^ssh-//'` ;;
 	esac

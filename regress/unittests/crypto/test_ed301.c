@@ -16,7 +16,7 @@
 
 #include "includes.h"
 
-#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#ifdef WITH_ED301
 
 #include <sys/types.h>
 
@@ -380,4 +380,4 @@ ed301_tests(void)
 	ERR_clear_error();
 }
 
-#endif /* WITH_OPENSSL && USE_ED301 */
+#endif /* WITH_ED301 */

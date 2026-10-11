@@ -1,6 +1,8 @@
 #	$OpenBSD: cert-userkey.sh,v 1.34 2026/09/02 00:39:18 djm Exp $
 #	Placed in the Public Domain.
 
+# Ed301 participates through SSH_KEYTYPES from ssh -Q key-plain.
+
 tid="certified user keys"
 
 rm -f $OBJ/authorized_keys_${USER}* $OBJ/user_ca_key* $OBJ/cert_user_key*
@@ -13,6 +15,7 @@ echo "AuthorizedKeysFile $OBJ/authorized_keys_%u_*" >> $OBJ/sshd_proxy_bak
 PLAIN_TYPES=""
 for i in `$SSH -Q key-plain | maybe_filter_sk`; do
 	case "$i" in
+	ssh-ed301@eirindeval.de) t="ed301" ;;
 	*@openssh.com*)	t="$i" ;;
 	*)		t=`echo "$i" | sed 's/^ssh-//'` ;;
 	esac
@@ -32,6 +35,7 @@ fi
 
 kname() {
 	case $1 in
+	ed301) n="ssh-ed301" ;;
 	rsa-sha2-*) n="$1" ;;
 	sk-ecdsa-*) n="sk-ecdsa" ;;
 	sk-ssh-ed25519*) n="sk-ssh-ed25519" ;;
@@ -310,7 +314,14 @@ test_one() {
 	fi
 
 	for auth in $auth_choice ; do
-		for ktype in $rsa ed25519 ; do
+		for ktype in $rsa ed25519 $(
+			$SSH -Q key-plain | grep -q '^ssh-ed301@eirindeval.de$' && echo ed301
+		) ; do
+			t=$(kname "$ktype")
+			(
+				cat $OBJ/ssh_proxy_bak
+				echo "PubkeyAcceptedAlgorithms ${t}"
+			) > $OBJ/ssh_proxy
 			cat $OBJ/sshd_proxy_bak > $OBJ/sshd_proxy
 			if test "x$auth" = "xauthorized_keys" ; then
 				# Add CA to authorized_keys

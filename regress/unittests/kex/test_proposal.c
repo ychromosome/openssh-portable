@@ -21,6 +21,7 @@
 #include "ssherr.h"
 #include "sshbuf.h"
 #include "kex.h"
+#include "crypto_api.h"
 #include "myproposal.h"
 #include "packet.h"
 #include "xmalloc.h"
@@ -114,6 +115,21 @@ kex_proposal_populate_tests(void)
 				ssh.compat <<= 1;
 		}
 	}
+
+	TEST_DONE();
+
+#ifdef WITH_ED301
+	TEST_START("Ed301 runtime host-key proposal filtering");
+	kex.server = 0;
+	ssh.compat = 0;
+	kex_proposal_populate_entries(&ssh, prop, NULL, NULL, NULL, NULL,
+	    "ssh-ed301@eirindeval.de,ssh-ed25519");
+	ASSERT_STRING_EQ(prop[PROPOSAL_SERVER_HOST_KEY_ALGS],
+	    ssh_ed301_available() ? "ssh-ed301@eirindeval.de,ssh-ed25519" :
+	    "ssh-ed25519");
+	kex_proposal_free_entries(prop);
+	TEST_DONE();
+#endif
 
 	free(kexalgs);
 	free(ciphers);

@@ -1672,10 +1672,11 @@ main(int ac, char **av)
 		}
 #ifdef WITH_ED301
 		if (pubkey != NULL &&
-		    sshkey_type_plain(pubkey->type) == KEY_ED301 &&
+		    (sshkey_type_plain(pubkey->type) == KEY_ED301 ||
+		    sshkey_type_plain(pubkey->type) == KEY_MLDSA65_ED301) &&
 		    !ssh_ed301_available()) {
-			error("Skipping ED301 host key %s: "
-			    "provider unavailable",
+			error("Skipping %s host key %s: "
+			    "provider unavailable", sshkey_type(pubkey),
 			    options.host_key_files[i]);
 			sshkey_free(key);
 			sshkey_free(pubkey);
@@ -1707,6 +1708,9 @@ main(int ac, char **av)
 		case KEY_ED301:
 #endif
 		case KEY_ED25519:
+#ifdef WITH_MLDSA65_ED301
+		case KEY_MLDSA65_ED301:
+#endif
 		case KEY_MLDSA44_ED25519:
 		case KEY_ECDSA_SK:
 		case KEY_ED25519_SK:

@@ -69,7 +69,12 @@ int ssh_port = SSH_DEFAULT_PORT;
 #define KT_MIN		KT_RSA
 #ifdef WITH_ED301
 #define KT_ED301	(1<<7)
+#ifdef WITH_MLDSA65_ED301
+#define KT_MLDSA65_ED301 (1<<8)
+#define KT_MAX		KT_MLDSA65_ED301
+#else
 #define KT_MAX		KT_ED301
+#endif
 #else
 #define KT_MAX		KT_MLDSA44_ED25519
 #endif
@@ -79,6 +84,9 @@ int get_keytypes = KT_RSA|KT_ECDSA|KT_ED25519|KT_ECDSA_SK|
     KT_ED25519_SK|KT_MLDSA44_ED25519
 #ifdef WITH_ED301
     |KT_ED301
+#endif
+#ifdef WITH_MLDSA65_ED301
+    |KT_MLDSA65_ED301
 #endif
     ;
 
@@ -278,6 +286,13 @@ keygrab_ssh2(con *c)
 		    "ecdsa-sha2-nistp384,"
 		    "ecdsa-sha2-nistp521";
 		break;
+#ifdef WITH_MLDSA65_ED301
+	case KT_MLDSA65_ED301:
+		myproposal[PROPOSAL_SERVER_HOST_KEY_ALGS] = get_cert ?
+		    "ssh-mldsa65-ed301-cert-v01@eirindeval.de" :
+		    "ssh-mldsa65-ed301@eirindeval.de";
+		break;
+#endif
 	case KT_MLDSA44_ED25519:
 		myproposal[PROPOSAL_SERVER_HOST_KEY_ALGS] = get_cert ?
 		    "ssh-mldsa44-ed25519-cert" :
@@ -790,6 +805,11 @@ main(int argc, char **argv)
 				case KEY_ECDSA_SK:
 					get_keytypes |= KT_ECDSA_SK;
 					break;
+#ifdef WITH_MLDSA65_ED301
+				case KEY_MLDSA65_ED301:
+					get_keytypes |= KT_MLDSA65_ED301;
+					break;
+#endif
 				case KEY_MLDSA44_ED25519:
 					get_keytypes |= KT_MLDSA44_ED25519;
 					break;

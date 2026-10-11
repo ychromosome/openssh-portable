@@ -241,8 +241,12 @@ do_kex(char *kex)
 		    KEY_MLDSA44_ED25519, 512);
 #endif
 #ifdef WITH_ED301
-	if (ssh_ed301_available())
+	if (ssh_ed301_available()) {
 		do_kex_with_key(kex, NULL, NULL, NULL, KEY_ED301, 304);
+#ifdef WITH_MLDSA65_ED301
+		do_kex_with_key(kex, NULL, NULL, NULL, KEY_MLDSA65_ED301, 560);
+#endif
+	}
 	else
 		fprintf(stderr, "SKIP Ed301 host-key KEX test: "
 		    "provider unavailable\n");

@@ -18,6 +18,28 @@ ed301_testdata() {
 	    > ed301_1-cert.fp
 }
 
+mldsa65_ed301_testdata() {
+	ssh-keygen -t mldsa65-ed301 -C "MLDSA65-ED301 test key #1" -N "" -f mldsa65_ed301_1
+	ssh-keygen -t mldsa65-ed301 -C "MLDSA65-ED301 test key #2" -N "" -f mldsa65_ed301_2
+	cp mldsa65_ed301_1 mldsa65_ed301_1_pw
+	ssh-keygen -p -f mldsa65_ed301_1_pw -P "" -N "$PW"
+	ssh-keygen -s mldsa65_ed301_2 -I julius -n host1,host2 -h \
+	    -V 19990101:20110101 -z 8 mldsa65_ed301_1.pub
+	for key in mldsa65_ed301_1 mldsa65_ed301_2; do
+		ssh-keygen -l -f "$key" | awk '{print $2}' > "$key.fp"
+		ssh-keygen -B -f "$key" | awk '{print $2}' > "$key.fp.bb"
+	done
+	ssh-keygen -l -f mldsa65_ed301_1-cert.pub | awk '{print $2}' \
+	    > mldsa65_ed301_1-cert.fp
+}
+
+if [ "${1:-}" = mldsa65-ed301 ]; then
+	set -e
+	cd testdata
+	mldsa65_ed301_testdata
+	exit 0
+fi
+
 if [ "${1:-}" = ed301 ]; then
 	set -e
 	cd testdata
@@ -219,4 +241,8 @@ echo "$PW" > pw
 
 if ssh -Q key-plain | grep -q '^ssh-ed301@eirindeval.de$'; then
 	ed301_testdata
+fi
+
+if ssh -Q key-plain | grep -q '^ssh-mldsa65-ed301@eirindeval.de$'; then
+	mldsa65_ed301_testdata
 fi

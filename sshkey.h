@@ -65,6 +65,8 @@ enum sshkey_types {
 	KEY_MLDSA44_ED25519_CERT,
 	KEY_ED301,
 	KEY_ED301_CERT,
+	KEY_MLDSA65_ED301,
+	KEY_MLDSA65_ED301_CERT,
 	KEY_UNSPEC
 };
 
@@ -125,6 +127,9 @@ struct sshkey {
 	/* KEY_ED301 */
 	u_char	*ed301_sk;
 	u_char	*ed301_pk;
+	/* KEY_MLDSA65_ED301 */
+	u_char	*mldsa65_ed301_sk;
+	u_char	*mldsa65_ed301_pk;
 	/* KEY_MLDSA44_ED25519 */
 	u_char	*mldsa_ed25519_sk;
 	u_char	*mldsa_ed25519_pk;
@@ -258,6 +263,8 @@ const char	*sshkey_ssh_name(const struct sshkey *);
 const char	*sshkey_ssh_name_plain(const struct sshkey *);
 int		 sshkey_names_valid2(const char *, int, int);
 char		*sshkey_alg_list(int, int, int, char);
+char		*sshkey_alg_list_all(int, int, int, char);
+char	*sshkey_alg_filter(const char *);
 
 int	 sshkey_from_blob(const u_char *, size_t, struct sshkey **);
 int	 sshkey_fromb(struct sshbuf *, struct sshkey **);

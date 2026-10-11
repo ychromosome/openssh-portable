@@ -18,6 +18,7 @@ for i in ${SSH_KEYTYPES}; do
 		ecdsa-sha2-nistp521)	ktypes="$ktypes ecdsa-521" ;;
 		sk-ssh-ed25519*)	ktypes="$ktypes ed25519-sk" ;;
 		sk-ecdsa-sha2-nistp256*) ktypes="$ktypes ecdsa-sk" ;;
+		ssh-mldsa65-ed301*) ktypes="$ktypes mldsa65-ed301" ;;
 		ssh-mldsa44-ed25519*)	ktypes="$ktypes mldsa44-ed25519" ;;
 	esac
 done
@@ -45,6 +46,7 @@ kname_to_ktype() {
 	rsa-*)		echo rsa-sha2-512,rsa-sha2-256,ssh-rsa;;
 	ed25519-sk)	echo sk-ssh-ed25519@openssh.com;;
 	ecdsa-sk)	echo sk-ecdsa-sha2-nistp256@openssh.com;;
+	mldsa65-ed301) echo ssh-mldsa65-ed301@eirindeval.de;;
 	mldsa44-ed25519) echo ssh-mldsa44-ed25519;;
 	esac
 }

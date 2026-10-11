@@ -8,6 +8,18 @@ ed301_testdata() {
 	ssh-keygen -Y sign -f ed301 -n "$NAMESPACE" - < signed-data > ed301.sig
 }
 
+mldsa65_ed301_testdata() {
+	ssh-keygen -t mldsa65-ed301 -C "MLDSA65-ED301 test key" -N "" -f mldsa65_ed301
+	ssh-keygen -Y sign -f mldsa65_ed301 -n "$NAMESPACE" - < signed-data > mldsa65_ed301.sig
+}
+
+if [ "${1:-}" = mldsa65-ed301 ]; then
+	set -e
+	cd testdata
+	mldsa65_ed301_testdata
+	exit 0
+fi
+
 if [ "${1:-}" = ed301 ]; then
 	set -e
 	cd testdata
@@ -59,4 +71,8 @@ ssh-keygen -w "$SK_DUMMY" \
 
 if ssh -Q key-plain | grep -q '^ssh-ed301@eirindeval.de$'; then
 	ed301_testdata
+fi
+
+if ssh -Q key-plain | grep -q '^ssh-mldsa65-ed301@eirindeval.de$'; then
+	mldsa65_ed301_testdata
 fi

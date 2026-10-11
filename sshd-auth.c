@@ -253,6 +253,9 @@ list_hostkey_types(void)
 		case KEY_ED301:
 #endif
 		case KEY_ED25519:
+#ifdef WITH_MLDSA65_ED301
+		case KEY_MLDSA65_ED301:
+#endif
 		case KEY_MLDSA44_ED25519:
 		case KEY_ECDSA_SK:
 		case KEY_ED25519_SK:
@@ -276,6 +279,9 @@ list_hostkey_types(void)
 		case KEY_ED301_CERT:
 #endif
 		case KEY_ED25519_CERT:
+#ifdef WITH_MLDSA65_ED301
+		case KEY_MLDSA65_ED301_CERT:
+#endif
 		case KEY_MLDSA44_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
 		case KEY_ED25519_SK_CERT:
@@ -304,6 +310,9 @@ get_hostkey_public_by_type(int type, int nid, struct ssh *ssh)
 		case KEY_ED301_CERT:
 #endif
 		case KEY_ED25519_CERT:
+#ifdef WITH_MLDSA65_ED301
+		case KEY_MLDSA65_ED301_CERT:
+#endif
 		case KEY_MLDSA44_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
 		case KEY_ED25519_SK_CERT:

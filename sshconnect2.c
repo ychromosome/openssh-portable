@@ -241,11 +241,22 @@ ssh_kex2(struct ssh *ssh, char *host, struct sockaddr_storage *hostaddr,
 		use_known_hosts_order = 1;
 
 	/* Expand or fill in HostkeyAlgorithms */
-	all_key = sshkey_alg_list(0, 0, 1, ',');
-	if ((r = kex_assemble_names(&options.hostkeyalgorithms,
+	all_key = sshkey_alg_list_all(0, 0, 1, ',');
+	if ((options.hostkeyalgorithms == NULL ||
+	    *options.hostkeyalgorithms != '\0') &&
+	    (r = kex_assemble_names(&options.hostkeyalgorithms,
 	    kex_default_pk_alg(), all_key)) != 0)
 		fatal_fr(r, "kex_assemble_namelist");
 	free(all_key);
+
+	{
+		char *filtered = sshkey_alg_filter(options.hostkeyalgorithms);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(options.hostkeyalgorithms);
+		options.hostkeyalgorithms = filtered;
+	}
 
 	if (use_known_hosts_order) {
 		hkalgs = order_hostkeyalgs(host, (struct sockaddr *)hostaddr,

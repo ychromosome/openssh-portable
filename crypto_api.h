@@ -201,7 +201,6 @@ int crypto_sign_mldsa44_seeded(uint8_t sig[MLDSA44_SIGBYTES],
 #define MLDSA65_SIGBYTES 3309
 #define MLDSA65_SEEDBYTES 32
 
-#if 0
 int crypto_sign_mldsa65_keypair(uint8_t pk[MLDSA65_PUBLICKEYBYTES],
     uint8_t sk[MLDSA65_SECRETKEYBYTES]);
 int crypto_sign_mldsa65(uint8_t sig[MLDSA65_SIGBYTES],
@@ -219,7 +218,6 @@ int crypto_sign_mldsa65_seeded(uint8_t sig[MLDSA65_SIGBYTES],
     const uint8_t *ctx, size_t ctxlen,
     const uint8_t sk[MLDSA65_SECRETKEYBYTES],
     const uint8_t seed[MLDSA65_SEEDBYTES]);
-#endif
 
 /* ML-DSA-87 */
 #define MLDSA87_PUBLICKEYBYTES 2592
@@ -264,6 +262,30 @@ int crypto_sign_mldsa44_ed25519_verify(const uint8_t sig[MLDSA44_ED25519_SIG_SZ]
     const uint8_t *msg, size_t msglen,
     const uint8_t *ctx, size_t ctxlen,
     const uint8_t pk[MLDSA44_ED25519_PK_SZ]);
+
+#ifdef WITH_MLDSA65_ED301
+/* MLDSA65-Ed301-SHA512 */
+#define MLDSA65_ED301_PK_SZ \
+    (MLDSA65_PUBLICKEYBYTES + crypto_sign_ed301_PUBLICKEYBYTES)
+#define MLDSA65_ED301_SK_SZ (MLDSA65_SEEDBYTES + crypto_sign_ed301_SEEDBYTES)
+#define MLDSA65_ED301_SIG_SZ (MLDSA65_SIGBYTES + crypto_sign_ed301_BYTES)
+
+int crypto_sign_mldsa65_ed301_keygen(uint8_t pk[MLDSA65_ED301_PK_SZ],
+    uint8_t sk[MLDSA65_ED301_SK_SZ]);
+int crypto_sign_mldsa65_ed301_keygen_seeded(uint8_t pk[MLDSA65_ED301_PK_SZ],
+    uint8_t sk[MLDSA65_ED301_SK_SZ],
+    const uint8_t mldsa_seed[MLDSA65_SEEDBYTES],
+    const uint8_t ed301_seed[crypto_sign_ed301_SEEDBYTES]);
+int crypto_sign_mldsa65_ed301_sign(uint8_t sig[MLDSA65_ED301_SIG_SZ],
+    const uint8_t *msg, size_t msglen,
+    const uint8_t *ctx, size_t ctxlen,
+    const uint8_t sk[MLDSA65_ED301_SK_SZ]);
+int crypto_sign_mldsa65_ed301_verify(const uint8_t sig[MLDSA65_ED301_SIG_SZ],
+    const uint8_t *msg, size_t msglen,
+    const uint8_t *ctx, size_t ctxlen,
+    const uint8_t pk[MLDSA65_ED301_PK_SZ]);
+
+#endif
 
 /* Utility */
 void sha3_256(uint8_t digest[32], const uint8_t *data, size_t len);

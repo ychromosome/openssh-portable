@@ -457,6 +457,125 @@ ed301_negative_tests(void)
 }
 #endif /* WITH_ED301 */
 
+#ifdef WITH_MLDSA65_ED301
+static void
+mldsa65_ed301_sshkey_tests(void)
+{
+	struct sshkey *key = NULL, *parsed = NULL, *ca = NULL;
+	struct sshbuf *b, *file, *rawsig;
+	const u_char msg[] = "ML-DSA65/Ed301 SSH key roundtrip";
+	u_char pk[MLDSA65_ED301_PK_SZ + 1], sk[MLDSA65_ED301_SK_SZ + 1];
+	u_char raw[MLDSA65_ED301_SIG_SZ + 1];
+	u_char *sig;
+	const u_char *p;
+	size_t siglen, n, i;
+
+	if (!ssh_ed301_available()) {
+		TEST_START("ML-DSA65/Ed301 unavailable key generation");
+		ASSERT_INT_EQ(sshkey_generate(KEY_MLDSA65_ED301, 560, &key),
+		    SSH_ERR_FEATURE_UNSUPPORTED);
+		ASSERT_PTR_EQ(key, NULL);
+		TEST_DONE();
+		fprintf(stderr, "SKIP ML-DSA65/Ed301 sshkey: "
+		    "provider unavailable\n");
+		return;
+	}
+	TEST_START("ML-DSA65/Ed301 key and encrypted private roundtrip");
+	ASSERT_INT_EQ(sshkey_generate(KEY_MLDSA65_ED301, 560, &key), 0);
+	ASSERT_INT_EQ(sshkey_size(key), 560);
+	ASSERT_PTR_NE(file = sshbuf_new(), NULL);
+	ASSERT_INT_EQ(sshkey_private_to_fileblob(key, file, "test-passphrase",
+	    "test", SSHKEY_PRIVATE_OPENSSH, NULL, 0), 0);
+	ASSERT_INT_EQ(sshkey_parse_private_fileblob(file, "test-passphrase",
+	    &parsed, NULL), 0);
+	ASSERT_INT_EQ(sshkey_equal_public(key, parsed), 1);
+	ASSERT_INT_EQ(sshkey_sign(parsed, &sig, &siglen, msg, sizeof(msg),
+	    NULL, NULL, NULL, 0), 0);
+	ASSERT_INT_EQ(sshkey_verify(key, sig, siglen, msg, sizeof(msg),
+	    NULL, 0, NULL), 0);
+	sshkey_free(parsed);
+	parsed = NULL;
+	sshbuf_free(file);
+	TEST_DONE();
+
+	TEST_START("ML-DSA65/Ed301 private lengths and full PK consistency");
+	for (i = 0; i < 8; i++) {
+		memcpy(pk, key->mldsa65_ed301_pk, MLDSA65_ED301_PK_SZ);
+		memcpy(sk, key->mldsa65_ed301_sk, MLDSA65_ED301_SK_SZ);
+		pk[MLDSA65_ED301_PK_SZ] = sk[MLDSA65_ED301_SK_SZ] = 0;
+		if (i == 0) pk[0] ^= 1;
+		if (i == 1) pk[MLDSA65_PUBLICKEYBYTES] ^= 1;
+		if (i == 2) sk[0] ^= 1;
+		if (i == 3) sk[MLDSA65_SEEDBYTES] ^= 1;
+		ASSERT_PTR_NE(b = sshbuf_new(), NULL);
+		ASSERT_INT_EQ(sshbuf_put_cstring(b,
+		    "ssh-mldsa65-ed301@eirindeval.de"), 0);
+		ASSERT_INT_EQ(sshbuf_put_string(b, pk,
+		    i == 4 ? MLDSA65_ED301_PK_SZ - 1 :
+		    i == 5 ? MLDSA65_ED301_PK_SZ + 1 : MLDSA65_ED301_PK_SZ), 0);
+		ASSERT_INT_EQ(sshbuf_put_string(b, sk,
+		    i == 6 ? MLDSA65_ED301_SK_SZ - 1 :
+		    i == 7 ? MLDSA65_ED301_SK_SZ + 1 : MLDSA65_ED301_SK_SZ), 0);
+		ASSERT_INT_EQ(sshkey_private_deserialize(b, &parsed),
+		    SSH_ERR_INVALID_FORMAT);
+		ASSERT_PTR_EQ(parsed, NULL);
+		sshbuf_free(b);
+	}
+	TEST_DONE();
+
+	TEST_START("ML-DSA65/Ed301 signature names, lengths and trailing data");
+	ASSERT_PTR_NE(rawsig = sshbuf_from(sig, siglen), NULL);
+	ASSERT_INT_EQ(sshbuf_skip_string(rawsig), 0);
+	ASSERT_INT_EQ(sshbuf_get_string_direct(rawsig, &p, &n), 0);
+	ASSERT_SIZE_T_EQ(n, MLDSA65_ED301_SIG_SZ);
+	memcpy(raw, p, n);
+	raw[n] = 0;
+	for (i = 0; i < 4; i++) {
+		ASSERT_PTR_NE(b = sshbuf_new(), NULL);
+		ASSERT_INT_EQ(sshbuf_put_cstring(b,
+		    i == 0 ? "ssh-ed301@eirindeval.de" :
+		    "ssh-mldsa65-ed301@eirindeval.de"), 0);
+		ASSERT_INT_EQ(sshbuf_put_string(b, raw,
+		    i == 1 ? n - 1 : i == 2 ? n + 1 : n), 0);
+		if (i == 3) ASSERT_INT_EQ(sshbuf_put_u8(b, 1), 0);
+		ASSERT_INT_EQ(sshkey_verify(key, sshbuf_ptr(b), sshbuf_len(b),
+		    msg, sizeof(msg), NULL, 0, NULL),
+		    i == 0 ? SSH_ERR_KEY_TYPE_MISMATCH :
+		    i == 3 ? SSH_ERR_UNEXPECTED_TRAILING_DATA :
+		    SSH_ERR_INVALID_FORMAT);
+		sshbuf_free(b);
+	}
+	sshbuf_free(rawsig);
+	free(sig);
+	TEST_DONE();
+
+	TEST_START("ML-DSA65/Ed301 certified private seed matches subject");
+	ASSERT_INT_EQ(sshkey_generate(KEY_ED301, 304, &ca), 0);
+	ASSERT_INT_EQ(sshkey_to_certified(key), 0);
+	key->cert->type = SSH2_CERT_TYPE_USER;
+	key->cert->valid_after = 1;
+	key->cert->valid_before = ~(uint64_t)0;
+	ASSERT_INT_EQ(sshkey_certify(key, ca, NULL, NULL, NULL), 0);
+	ASSERT_PTR_NE(b = sshbuf_new(), NULL);
+	ASSERT_INT_EQ(sshkey_private_serialize(key, b), 0);
+	ASSERT_INT_EQ(sshkey_private_deserialize(b, &parsed), 0);
+	ASSERT_INT_EQ(sshkey_equal_public(key, parsed), 1);
+	sshkey_free(parsed);
+	parsed = NULL;
+	sshbuf_reset(b);
+	key->mldsa65_ed301_sk[0] ^= 1;
+	ASSERT_INT_EQ(sshkey_private_serialize(key, b), 0);
+	ASSERT_INT_EQ(sshkey_private_deserialize(b, &parsed),
+	    SSH_ERR_INVALID_FORMAT);
+	ASSERT_PTR_EQ(parsed, NULL);
+	sshbuf_free(b);
+	sshkey_free(ca);
+	sshkey_free(key);
+	explicit_bzero(sk, sizeof(sk));
+	TEST_DONE();
+}
+#endif /* WITH_MLDSA65_ED301 */
+
 void
 sshkey_tests(void)
 {
@@ -946,6 +1065,9 @@ sshkey_tests(void)
 
 #ifdef WITH_ED301
 	ed301_negative_tests();
+#ifdef WITH_MLDSA65_ED301
+	mldsa65_ed301_sshkey_tests();
+#endif
 #ifdef WITH_OPENSSL
 	ed301_pkcs8_tests();
 #endif

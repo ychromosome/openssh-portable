@@ -62,6 +62,14 @@
 #define ED301_CERT_ALG ""
 #endif
 
+#ifdef WITH_MLDSA65_ED301
+#define MLDSA65_ED301_PK_ALG "ssh-mldsa65-ed301@eirindeval.de,"
+#define MLDSA65_ED301_CERT_ALG "ssh-mldsa65-ed301-cert-v01@eirindeval.de,"
+#else
+#define MLDSA65_ED301_PK_ALG ""
+#define MLDSA65_ED301_CERT_ALG ""
+#endif
+
 #define	KEX_DEFAULT_PK_ALG	\
 	ED301_CERT_ALG \
 	"ssh-ed25519-cert-v01@openssh.com," \
@@ -73,6 +81,7 @@
 	"webauthn-sk-ecdsa-sha2-nistp256-cert-v01@openssh.com," \
 	"rsa-sha2-512-cert-v01@openssh.com," \
 	"rsa-sha2-256-cert-v01@openssh.com," \
+	MLDSA65_ED301_CERT_ALG \
 	"ssh-mldsa44-ed25519-cert," \
 	ED301_PK_ALG \
 	"ssh-ed25519," \
@@ -84,6 +93,7 @@
 	"webauthn-sk-ecdsa-sha2-nistp256@openssh.com," \
 	"rsa-sha2-512," \
 	"rsa-sha2-256," \
+	MLDSA65_ED301_PK_ALG \
 	"ssh-mldsa44-ed25519"
 
 #define	KEX_SERVER_ENCRYPT \

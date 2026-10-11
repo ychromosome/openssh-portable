@@ -2940,6 +2940,10 @@ fill_default_options(Options * options)
 		    _PATH_SSH_CLIENT_ID_ED25519, 0);
 		add_identity_file(options, "~/",
 		    _PATH_SSH_CLIENT_ID_ED25519_SK, 0);
+#ifdef WITH_MLDSA65_ED301
+		add_identity_file(options, "~/",
+		    _PATH_SSH_CLIENT_ID_MLDSA65_ED301, 0);
+#endif
 		add_identity_file(options, "~/",
 		    _PATH_SSH_CLIENT_ID_MLDSA44_ED25519, 0);
 	}
@@ -3048,8 +3052,8 @@ fill_default_options(Options * options)
 	all_cipher = cipher_alg_list(',', 0);
 	all_mac = mac_alg_list(',');
 	all_kex = kex_alg_list_all(',');
-	all_key = sshkey_alg_list(0, 0, 1, ',');
-	all_sig = sshkey_alg_list(0, 1, 1, ',');
+	all_key = sshkey_alg_list_all(0, 0, 1, ',');
+	all_sig = sshkey_alg_list_all(0, 1, 1, ',');
 	/* remove unsupported algos from default lists */
 	def_cipher = match_filter_allowlist(KEX_CLIENT_ENCRYPT, all_cipher);
 	def_mac = match_filter_allowlist(KEX_CLIENT_MAC, all_mac);
@@ -3079,9 +3083,41 @@ fill_default_options(Options * options)
 		free(options->kex_algorithms);
 		options->kex_algorithms = filtered;
 	}
-	ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
-	ASSEMBLE(pubkey_accepted_algos, def_key, all_key);
-	ASSEMBLE(ca_sign_algorithms, def_sig, all_sig);
+	if (options->hostbased_accepted_algos == NULL ||
+	    *options->hostbased_accepted_algos != '\0')
+		ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
+	{
+		char *filtered =
+		    sshkey_alg_filter(options->hostbased_accepted_algos);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(options->hostbased_accepted_algos);
+		options->hostbased_accepted_algos = filtered;
+	}
+	if (options->pubkey_accepted_algos == NULL ||
+	    *options->pubkey_accepted_algos != '\0')
+		ASSEMBLE(pubkey_accepted_algos, def_key, all_key);
+	{
+		char *filtered =
+		    sshkey_alg_filter(options->pubkey_accepted_algos);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(options->pubkey_accepted_algos);
+		options->pubkey_accepted_algos = filtered;
+	}
+	if (options->ca_sign_algorithms == NULL ||
+	    *options->ca_sign_algorithms != '\0')
+		ASSEMBLE(ca_sign_algorithms, def_sig, all_sig);
+	{
+		char *filtered = sshkey_alg_filter(options->ca_sign_algorithms);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(options->ca_sign_algorithms);
+		options->ca_sign_algorithms = filtered;
+	}
 #undef ASSEMBLE
 
 #define CLEAR_ON_NONE(v) \
@@ -3762,11 +3798,21 @@ dump_client_config(Options *o, const char *host)
 	 * the host key algorithms are by default dynamically chosen based
 	 * on the host's keys found in known_hosts.
 	 */
-	all_key = sshkey_alg_list(0, 0, 1, ',');
-	if ((r = kex_assemble_names(&o->hostkeyalgorithms, kex_default_pk_alg(),
+	all_key = sshkey_alg_list_all(0, 0, 1, ',');
+	if ((o->hostkeyalgorithms == NULL || *o->hostkeyalgorithms != '\0') &&
+	    (r = kex_assemble_names(&o->hostkeyalgorithms, kex_default_pk_alg(),
 	    all_key)) != 0)
 		fatal_fr(r, "expand HostKeyAlgorithms");
 	free(all_key);
+
+	{
+		char *filtered = sshkey_alg_filter(o->hostkeyalgorithms);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(o->hostkeyalgorithms);
+		o->hostkeyalgorithms = filtered;
+	}
 
 	/* Most interesting options first: user, host, port */
 	dump_cfg_string(oHost, o->host_arg);

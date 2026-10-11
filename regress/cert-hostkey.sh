@@ -76,6 +76,7 @@ PLAIN_TYPES=""
 for i in $SSH_KEYTYPES; do
 	case "$i" in
 	ssh-ed301@eirindeval.de) t="ed301" ;;
+	ssh-mldsa65-ed301@eirindeval.de) t="mldsa65-ed301" ;;
 	*@openssh.com*)	t="$i" ;;
 	*)		t=`echo "$i" | sed 's/^ssh-//'` ;;
 	esac

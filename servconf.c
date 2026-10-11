@@ -212,8 +212,8 @@ assemble_algorithms(ServerOptions *o)
 	all_cipher = cipher_alg_list(',', 0);
 	all_mac = mac_alg_list(',');
 	all_kex = kex_alg_list_all(',');
-	all_key = sshkey_alg_list(0, 0, 1, ',');
-	all_sig = sshkey_alg_list(0, 1, 1, ',');
+	all_key = sshkey_alg_list_all(0, 0, 1, ',');
+	all_sig = sshkey_alg_list_all(0, 1, 1, ',');
 	/* remove unsupported algos from default lists */
 	def_cipher = match_filter_allowlist(KEX_SERVER_ENCRYPT, all_cipher);
 	def_mac = match_filter_allowlist(KEX_SERVER_MAC, all_mac);
@@ -239,10 +239,50 @@ assemble_algorithms(ServerOptions *o)
 		free(o->kex_algorithms);
 		o->kex_algorithms = filtered;
 	}
-	ASSEMBLE(hostkeyalgorithms, def_key, all_key);
-	ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
-	ASSEMBLE(pubkey_accepted_algos, def_key, all_key);
-	ASSEMBLE(ca_sign_algorithms, def_sig, all_sig);
+	if (o->hostkeyalgorithms == NULL ||
+	    *o->hostkeyalgorithms != '\0')
+		ASSEMBLE(hostkeyalgorithms, def_key, all_key);
+	{
+		char *filtered = sshkey_alg_filter(o->hostkeyalgorithms);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(o->hostkeyalgorithms);
+		o->hostkeyalgorithms = filtered;
+	}
+	if (o->hostbased_accepted_algos == NULL ||
+	    *o->hostbased_accepted_algos != '\0')
+		ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
+	{
+		char *filtered = sshkey_alg_filter(o->hostbased_accepted_algos);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(o->hostbased_accepted_algos);
+		o->hostbased_accepted_algos = filtered;
+	}
+	if (o->pubkey_accepted_algos == NULL ||
+	    *o->pubkey_accepted_algos != '\0')
+		ASSEMBLE(pubkey_accepted_algos, def_key, all_key);
+	{
+		char *filtered = sshkey_alg_filter(o->pubkey_accepted_algos);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(o->pubkey_accepted_algos);
+		o->pubkey_accepted_algos = filtered;
+	}
+	if (o->ca_sign_algorithms == NULL ||
+	    *o->ca_sign_algorithms != '\0')
+		ASSEMBLE(ca_sign_algorithms, def_sig, all_sig);
+	{
+		char *filtered = sshkey_alg_filter(o->ca_sign_algorithms);
+
+		if (filtered == NULL)
+			fatal_f("sshkey_alg_filter");
+		free(o->ca_sign_algorithms);
+		o->ca_sign_algorithms = filtered;
+	}
 #undef ASSEMBLE
 	free(all_cipher);
 	free(all_mac);
@@ -347,6 +387,10 @@ fill_default_server_options(ServerOptions *options)
 #endif
 		servconf_add_hostkey("[default]", 0, options,
 		    _PATH_HOST_ED25519_KEY_FILE, 0);
+#ifdef WITH_MLDSA65_ED301
+		servconf_add_hostkey("[default]", 0, options,
+		    _PATH_HOST_MLDSA65_ED301_KEY_FILE, 0);
+#endif
 		servconf_add_hostkey("[default]", 0, options,
 		    _PATH_HOST_MLDSA44_ED25519_KEY_FILE, 0);
 	}

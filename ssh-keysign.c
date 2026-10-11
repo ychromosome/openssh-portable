@@ -210,6 +210,9 @@ main(int argc, char **argv)
 #endif
 	key_fd[i++] = open(_PATH_HOST_ED25519_KEY_FILE, O_RDONLY);
 	key_fd[i++] = open(_PATH_HOST_RSA_KEY_FILE, O_RDONLY);
+#ifdef WITH_MLDSA65_ED301
+	key_fd[i++] = open(_PATH_HOST_MLDSA65_ED301_KEY_FILE, O_RDONLY);
+#endif
 	key_fd[i++] = open(_PATH_HOST_MLDSA44_ED25519_KEY_FILE, O_RDONLY);
 
 	if ((pw = getpwuid(getuid())) == NULL)

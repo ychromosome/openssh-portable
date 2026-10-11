@@ -1028,4 +1028,8 @@ struct winsize {
 # define WITH_ED301 1
 #endif
 
+#if defined(WITH_ED301) && defined(USE_MLDSA)
+# define WITH_MLDSA65_ED301 1
+#endif
+
 #endif /* _DEFINES_H */

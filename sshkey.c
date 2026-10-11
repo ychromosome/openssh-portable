@@ -97,6 +97,10 @@ extern const struct sshkey_impl sshkey_ed25519_cert_impl;
 extern const struct sshkey_impl sshkey_ed25519_sk_impl;
 extern const struct sshkey_impl sshkey_ed25519_sk_cert_impl;
 # ifdef USE_MLDSA
+#ifdef WITH_MLDSA65_ED301
+extern const struct sshkey_impl sshkey_mldsa65_ed301_impl;
+extern const struct sshkey_impl sshkey_mldsa65_ed301_cert_impl;
+#endif
 extern const struct sshkey_impl sshkey_mldsa44_ed25519_impl;
 extern const struct sshkey_impl sshkey_mldsa44_ed25519_cert_impl;
 # endif /* USE_MLDSA */
@@ -135,7 +139,13 @@ const struct sshkey_impl * const keyimpls[] = {
 	&sshkey_ed25519_sk_cert_impl,
 #endif
 #ifdef USE_MLDSA
+#ifdef WITH_MLDSA65_ED301
+	&sshkey_mldsa65_ed301_impl,
+#endif
 	&sshkey_mldsa44_ed25519_impl,
+#ifdef WITH_MLDSA65_ED301
+	&sshkey_mldsa65_ed301_cert_impl,
+#endif
 	&sshkey_mldsa44_ed25519_cert_impl,
 #endif /* USE_MLDSA */
 #ifdef WITH_OPENSSL
@@ -329,20 +339,28 @@ sshkey_match_keyname_to_sigalgs(const char *keyname, const char *sigalgs)
 		return match_pattern_list(keyname, sigalgs, 0) == 1;
 }
 
-char *
-sshkey_alg_list(int certs_only, int plain_only, int include_sigonly, char sep)
+static char *
+sshkey_alg_list_impl(int certs_only, int plain_only, int include_sigonly,
+    char sep, int available_only)
 {
 	char *ret = NULL;
 	size_t i;
 	const struct sshkey_impl *impl;
 	char sep_str[2] = {sep, '\0'};
 
+#ifndef WITH_ED301
+	(void)available_only;
+#endif
+
 	for (i = 0; keyimpls[i] != NULL; i++) {
 		impl = keyimpls[i];
 		if (impl->name == NULL)
 			continue;
 #ifdef WITH_ED301
-		if ((impl->type == KEY_ED301 || impl->type == KEY_ED301_CERT) &&
+		if (available_only &&
+		    (impl->type == KEY_ED301 || impl->type == KEY_ED301_CERT ||
+		    impl->type == KEY_MLDSA65_ED301 ||
+		    impl->type == KEY_MLDSA65_ED301_CERT) &&
 		    !ssh_ed301_available())
 			continue;
 #endif
@@ -353,6 +371,34 @@ sshkey_alg_list(int certs_only, int plain_only, int include_sigonly, char sep)
 		xextendf(&ret, sep_str, "%s", impl->name);
 	}
 	return ret;
+}
+
+char *
+sshkey_alg_list(int certs_only, int plain_only, int include_sigonly, char sep)
+{
+	return sshkey_alg_list_impl(certs_only, plain_only, include_sigonly,
+	    sep, 1);
+}
+
+char *
+sshkey_alg_list_all(int certs_only, int plain_only, int include_sigonly,
+    char sep)
+{
+	return sshkey_alg_list_impl(certs_only, plain_only, include_sigonly,
+	    sep, 0);
+}
+
+char *
+sshkey_alg_filter(const char *names)
+{
+#ifdef WITH_ED301
+	if (!ssh_ed301_available())
+		return match_filter_denylist(names,
+		    "ssh-ed301@eirindeval.de,ssh-ed301-cert-v01@eirindeval.de,"
+		    "ssh-mldsa65-ed301@eirindeval.de,"
+		    "ssh-mldsa65-ed301-cert-v01@eirindeval.de");
+#endif
+	return strdup(names);
 }
 
 int
@@ -460,6 +506,10 @@ sshkey_type_plain(int type)
 #endif
 	case KEY_ED25519_CERT:
 		return KEY_ED25519;
+#ifdef WITH_MLDSA65_ED301
+	case KEY_MLDSA65_ED301_CERT:
+		return KEY_MLDSA65_ED301;
+#endif
 	case KEY_MLDSA44_ED25519_CERT:
 		return KEY_MLDSA44_ED25519;
 	case KEY_ED25519_SK_CERT:
@@ -486,6 +536,10 @@ sshkey_type_certified(int type)
 #endif
 	case KEY_ED25519:
 		return KEY_ED25519_CERT;
+#ifdef WITH_MLDSA65_ED301
+	case KEY_MLDSA65_ED301:
+		return KEY_MLDSA65_ED301_CERT;
+#endif
 	case KEY_MLDSA44_ED25519:
 		return KEY_MLDSA44_ED25519_CERT;
 	case KEY_ED25519_SK:
@@ -3489,6 +3543,9 @@ sshkey_private_to_fileblob(struct sshkey *key, struct sshbuf *blob,
 #ifdef WITH_OPENSSL
 	case KEY_ECDSA_SK:
 #endif /* WITH_OPENSSL */
+#ifdef WITH_MLDSA65_ED301
+	case KEY_MLDSA65_ED301:
+#endif
 	case KEY_MLDSA44_ED25519:
 		return sshkey_private_to_blob2(key, blob, passphrase,
 		    comment, openssh_format_cipher, openssh_format_rounds);

@@ -16,6 +16,7 @@ PLAIN_TYPES=""
 for i in `$SSH -Q key-plain | maybe_filter_sk`; do
 	case "$i" in
 	ssh-ed301@eirindeval.de) t="ed301" ;;
+	ssh-mldsa65-ed301@eirindeval.de) t="mldsa65-ed301" ;;
 	*@openssh.com*)	t="$i" ;;
 	*)		t=`echo "$i" | sed 's/^ssh-//'` ;;
 	esac
@@ -316,6 +317,7 @@ test_one() {
 	for auth in $auth_choice ; do
 		for ktype in $rsa ed25519 $(
 			$SSH -Q key-plain | grep -q '^ssh-ed301@eirindeval.de$' && echo ed301
+			$SSH -Q key-plain | grep -q '^ssh-mldsa65-ed301@eirindeval.de$' && echo mldsa65-ed301
 		) ; do
 			t=$(kname "$ktype")
 			(

@@ -218,7 +218,6 @@ crypto_sign_mldsa44_verify(const uint8_t sig[MLDSA44_SIGBYTES],
 
 /* ML-DSA 65 */
 
-#if 0
 int
 crypto_sign_mldsa65_keypair(uint8_t pk[MLDSA65_PUBLICKEYBYTES],
     uint8_t sk[MLDSA65_SECRETKEYBYTES])
@@ -312,7 +311,6 @@ crypto_sign_mldsa65_verify(const uint8_t sig[MLDSA65_SIGBYTES],
 
 	return (res.tag == LIBCRUX_RESULT_OK) ? 0 : -1;
 }
-#endif
 
 /* ML-DSA 87 */
 

@@ -139,7 +139,9 @@ kex_proposal_populate_entries(struct ssh *ssh, char *prop[PROPOSAL_MAX],
 			if (!ssh_ed301_available()) {
 				filtered = match_filter_denylist(prop[i],
 				    "ssh-ed301@eirindeval.de,"
-				    "ssh-ed301-cert-v01@eirindeval.de");
+				    "ssh-ed301-cert-v01@eirindeval.de,"
+				    "ssh-mldsa65-ed301@eirindeval.de,"
+				    "ssh-mldsa65-ed301-cert-v01@eirindeval.de");
 				if (filtered == NULL)
 					fatal_f("match_filter_denylist");
 				free(prop[i]);

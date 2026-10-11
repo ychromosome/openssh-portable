@@ -16,6 +16,12 @@
 #include "sshbuf.h"
 
 void mldsa_tests(void);
+#ifdef USE_MLDSA
+void mldsa65_tests(void);
+#endif
+#ifdef WITH_MLDSA65_ED301
+void mldsa65_ed301_tests(void);
+#endif
 void mlkem_tests(void);
 #ifdef USE_MLKEM1024
 void mlkem1024_tests(void);
@@ -27,7 +33,7 @@ void mldsa_eddsa_tests(void);
 void ed301_tests(void);
 void x301_tests(void);
 #endif
-#if defined(WITH_ED301) || defined(USE_MLKEM1024)
+#if defined(WITH_ED301) || defined(USE_MLDSA) || defined(USE_MLKEM1024)
 struct sshbuf *get_json_array(struct sshbuf *, const char *);
 struct sshbuf *get_json_object(struct sshbuf *);
 int get_json_boolean(struct sshbuf *, const char *);
@@ -119,7 +125,7 @@ get_json_string(struct sshbuf *content, const char *key, int consume)
 }
 
 
-#if defined(WITH_ED301) || defined(USE_MLKEM1024)
+#if defined(WITH_ED301) || defined(USE_MLDSA) || defined(USE_MLKEM1024)
 /* Container and scalar helpers for JSON crypto vectors. */
 static size_t
 json_value_offset(struct sshbuf *content, const char *key)
@@ -264,6 +270,7 @@ tests(void)
 {
 #ifdef USE_MLDSA
 	mldsa_tests();
+	mldsa65_tests();
 #endif
 #ifdef USE_MLKEM768X25519
 	mlkem_tests();
@@ -278,6 +285,9 @@ tests(void)
 #endif
 #ifdef USE_MLDSA
 	mldsa_eddsa_tests();
+#ifdef WITH_MLDSA65_ED301
+	mldsa65_ed301_tests();
+#endif
 #endif
 }
 

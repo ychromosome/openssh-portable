@@ -429,6 +429,9 @@ get_hostkey_by_type(int type, int nid, int need_private, struct ssh *ssh)
 		case KEY_ED25519_CERT:
 		case KEY_ECDSA_SK_CERT:
 		case KEY_ED25519_SK_CERT:
+#ifdef WITH_MLDSA65_ED301
+		case KEY_MLDSA65_ED301_CERT:
+#endif
 		case KEY_MLDSA44_ED25519_CERT:
 			key = sensitive_data.host_certificates[i];
 			break;

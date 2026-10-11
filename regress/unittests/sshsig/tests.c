@@ -123,6 +123,16 @@ tests(void)
 	check_sig("ed25519.pub", "ed25519.sig", msg, namespace);
 	TEST_DONE();
 
+#ifdef WITH_MLDSA65_ED301
+	if (ssh_ed301_available()) {
+		TEST_START("check MLDSA65-ED301 signature");
+		check_sig("mldsa65_ed301.pub", "mldsa65_ed301.sig",
+		    msg, namespace);
+		TEST_DONE();
+	} else
+		fprintf(stderr, "SKIP MLDSA65-Ed301 sshsig: "
+		    "provider unavailable\n");
+#endif
 	TEST_START("check MLDSA44-ED25519 signature");
 	check_sig("mldsa44-ed25519.pub", "mldsa44-ed25519.sig", msg, namespace);
 	TEST_DONE();

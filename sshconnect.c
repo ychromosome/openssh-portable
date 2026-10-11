@@ -1681,6 +1681,9 @@ show_other_keys(struct hostkeys *hostkeys, struct sshkey *key)
 		KEY_ED301,
 #endif
 		KEY_ED25519,
+#ifdef WITH_MLDSA65_ED301
+		KEY_MLDSA65_ED301,
+#endif
 		KEY_MLDSA44_ED25519,
 		-1
 	};

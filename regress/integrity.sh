@@ -4,9 +4,9 @@
 tid="integrity"
 cp $OBJ/sshd_proxy $OBJ/sshd_proxy_bak
 
-# start at byte 2900 (i.e. after kex) and corrupt at different offsets
+# Corrupt encrypted bytes, independent of KEX and host-key message sizes.
 tries=10
-startoffset=2900
+startoffset=0
 macs=`${SSH} -Q mac`
 # The following are not MACs, but ciphers with integrated integrity. They are
 # handled specially below.
@@ -36,7 +36,7 @@ for m in $macs; do
 		fi
 		cp $OBJ/sshd_proxy_bak $OBJ/sshd_proxy
 		# modify output from sshd at offset $off
-		pxy="proxycommand=$cmd | $OBJ/modpipe -wm xor:$off:1"
+		pxy="proxycommand=$cmd | $OBJ/modpipe -kwm xor:$off:1"
 		if ${SSH} -Q cipher-auth | grep "^${m}\$" >/dev/null 2>&1 ; then
 			echo "Ciphers=$m" >> $OBJ/sshd_proxy
 			macopt="-c $m"

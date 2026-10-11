@@ -30,7 +30,14 @@
 #define X301_KEX_ALG ""
 #endif
 
+#if defined(WITH_ED301) && defined(USE_MLKEM1024)
+#define MLKEM1024X301_KEX_ALG "mlkem1024x301-sha512@eirindeval.de,"
+#else
+#define MLKEM1024X301_KEX_ALG ""
+#endif
+
 #define KEX_SERVER_KEX	\
+	MLKEM1024X301_KEX_ALG \
 	"mlkem768x25519-sha256," \
 	"sntrup761x25519-sha512," \
 	"sntrup761x25519-sha512@openssh.com," \

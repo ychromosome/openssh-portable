@@ -62,6 +62,9 @@
 
 #define KEX_X301_SHA512_NAME "x301-sha512@eirindeval.de"
 
+#define KEX_MLKEM1024_X301_SHA512_NAME \
+	"mlkem1024x301-sha512@eirindeval.de"
+
 #define COMP_NONE	0
 #define COMP_DELAYED	2
 
@@ -101,6 +104,7 @@ enum kex_exchange {
 	KEX_KEM_MLKEM768X25519_SHA256,
 	KEX_KEM_MLKEM768ECDH_SHA256,
 	KEX_X301_SHA512,
+	KEX_MLKEM1024_X301_SHA512,
 	KEX_MAX
 };
 
@@ -187,6 +191,9 @@ struct kex {
 	const EC_GROUP *ec_group;	/* ECDH */
 #ifdef WITH_ED301
 	u_char x301_client_key[crypto_x301_SECRETBYTES];
+#ifdef USE_MLKEM1024
+	u_char mlkem1024_client_key[crypto_kem_mlkem1024_SECRETKEYBYTES];
+#endif
 #endif
 	u_char c25519_client_key[CURVE25519_SIZE]; /* 25519 + KEM */
 	u_char c25519_client_pubkey[CURVE25519_SIZE]; /* 25519 */
@@ -256,6 +263,13 @@ int	 kex_ecdh_enc(struct kex *, const struct sshbuf *, struct sshbuf **,
 int	 kex_ecdh_dec(struct kex *, const struct sshbuf *, struct sshbuf **);
 
 #ifdef WITH_ED301
+#ifdef USE_MLKEM1024
+int	 kex_kem_mlkem1024x301_keypair(struct kex *);
+int	 kex_kem_mlkem1024x301_enc(struct kex *, const struct sshbuf *,
+	    struct sshbuf **, struct sshbuf **);
+int	 kex_kem_mlkem1024x301_dec(struct kex *, const struct sshbuf *,
+	    struct sshbuf **);
+#endif
 int	 kex_x301_keypair(struct kex *);
 int	 kex_x301_enc(struct kex *, const struct sshbuf *, struct sshbuf **,
 	    struct sshbuf **);

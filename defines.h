@@ -998,6 +998,7 @@ struct winsize {
 # define USE_SNTRUP761X25519	1
 /* The ML-KEM768 and ML-DSA implementations also uses C89 features */
 # define USE_MLKEM768X25519	1
+# define USE_MLKEM1024		1
 # define USE_MLDSA		1
 #endif
 

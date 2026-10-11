@@ -142,6 +142,35 @@ int crypto_kem_mlkem768_enc_seeded(uint8_t ct[crypto_kem_mlkem768_CIPHERTEXTBYTE
     const uint8_t pk[crypto_kem_mlkem768_PUBLICKEYBYTES],
     const uint8_t seed[32]);
 
+/* ML-KEM-1024 */
+#define crypto_kem_mlkem1024_PUBLICKEYBYTES 1568
+#define crypto_kem_mlkem1024_SECRETKEYBYTES 3168
+#define crypto_kem_mlkem1024_CIPHERTEXTBYTES 1568
+#define crypto_kem_mlkem1024_BYTES 32
+#define crypto_kem_mlkem1024_ENCSEEDBYTES 32
+#define crypto_kem_mlkem1024_KEYPAIRSEEDBYTES 64
+
+/* Aliases for MLKEM1024 */
+#define MLKEM1024_PUBLICKEYBYTES crypto_kem_mlkem1024_PUBLICKEYBYTES
+#define MLKEM1024_SECRETKEYBYTES crypto_kem_mlkem1024_SECRETKEYBYTES
+#define MLKEM1024_CIPHERTEXTBYTES crypto_kem_mlkem1024_CIPHERTEXTBYTES
+#define MLKEM1024_BYTES crypto_kem_mlkem1024_BYTES
+
+int crypto_kem_mlkem1024_keypair(uint8_t pk[crypto_kem_mlkem1024_PUBLICKEYBYTES],
+    uint8_t sk[crypto_kem_mlkem1024_SECRETKEYBYTES]);
+int crypto_kem_mlkem1024_enc(uint8_t ct[crypto_kem_mlkem1024_CIPHERTEXTBYTES],
+    uint8_t shared_secret[crypto_kem_mlkem1024_BYTES],
+    const uint8_t pk[crypto_kem_mlkem1024_PUBLICKEYBYTES]);
+int crypto_kem_mlkem1024_dec(uint8_t shared_secret[crypto_kem_mlkem1024_BYTES],
+    const uint8_t ct[crypto_kem_mlkem1024_CIPHERTEXTBYTES],
+    const uint8_t sk[crypto_kem_mlkem1024_SECRETKEYBYTES]);
+int crypto_kem_mlkem1024_keypair_seeded(uint8_t pk[crypto_kem_mlkem1024_PUBLICKEYBYTES],
+    uint8_t sk[crypto_kem_mlkem1024_SECRETKEYBYTES], const uint8_t seed[64]);
+int crypto_kem_mlkem1024_enc_seeded(uint8_t ct[crypto_kem_mlkem1024_CIPHERTEXTBYTES],
+    uint8_t shared_secret[crypto_kem_mlkem1024_BYTES],
+    const uint8_t pk[crypto_kem_mlkem1024_PUBLICKEYBYTES],
+    const uint8_t seed[32]);
+
 /* ML-DSA-44 */
 #define MLDSA44_PUBLICKEYBYTES 1312
 #define MLDSA44_SECRETKEYBYTES 2560

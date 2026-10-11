@@ -809,6 +809,10 @@ kex_free(struct kex *kex)
 	free(kex->server_sig_algs);
 #ifdef WITH_ED301
 	explicit_bzero(kex->x301_client_key, sizeof(kex->x301_client_key));
+#ifdef USE_MLKEM1024
+	explicit_bzero(kex->mlkem1024_client_key,
+	    sizeof(kex->mlkem1024_client_key));
+#endif
 #endif
 	free(kex);
 }

@@ -1,0 +1,10 @@
+nistkats_mlkem_1024.json
+  Source: https://github.com/cryspen/libcrux/blob/c46481ce3cd1cc8315e90db114581d8c992c3d7d/libcrux-ml-kem/tests/kats/nistkats_mlkem_1024.json
+  Revision: c46481ce3cd1cc8315e90db114581d8c992c3d7d
+  SHA256: a93e80003b0ba6755ad20c99880871f698e139aa89f63f9fcac362430aae0876
+
+invalid_modulus_mlkem_1024.txt
+  Source: https://github.com/cryspen/libcrux/blob/c46481ce3cd1cc8315e90db114581d8c992c3d7d/libcrux-ml-kem/tests/kats/invalid_modulus/ML-KEM-1024.txt
+  Revision: c46481ce3cd1cc8315e90db114581d8c992c3d7d
+  SHA256: 9c27ef8951a6b6b59b57dcc4e213ae73472c3db956f4298d6c9983c54bb2c263
+

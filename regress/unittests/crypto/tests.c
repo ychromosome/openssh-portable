@@ -17,12 +17,17 @@
 
 void mldsa_tests(void);
 void mlkem_tests(void);
+#ifdef USE_MLKEM1024
+void mlkem1024_tests(void);
+#endif
 void ed25519_tests(void);
 void mldsa_eddsa_tests(void);
 
 #ifdef WITH_ED301
 void ed301_tests(void);
 void x301_tests(void);
+#endif
+#if defined(WITH_ED301) || defined(USE_MLKEM1024)
 struct sshbuf *get_json_array(struct sshbuf *, const char *);
 struct sshbuf *get_json_object(struct sshbuf *);
 int get_json_boolean(struct sshbuf *, const char *);
@@ -114,8 +119,8 @@ get_json_string(struct sshbuf *content, const char *key, int consume)
 }
 
 
-#ifdef WITH_ED301
-/* Container and scalar helpers for the hash-bound Ed301/X301 vectors. */
+#if defined(WITH_ED301) || defined(USE_MLKEM1024)
+/* Container and scalar helpers for JSON crypto vectors. */
 static size_t
 json_value_offset(struct sshbuf *content, const char *key)
 {
@@ -252,7 +257,7 @@ get_json_hex(struct sshbuf *content, const char *key, size_t *lenp)
 	free(hex);
 	return ret;
 }
-#endif /* WITH_ED301 */
+#endif /* WITH_ED301 || USE_MLKEM1024 */
 
 void
 tests(void)
@@ -262,6 +267,9 @@ tests(void)
 #endif
 #ifdef USE_MLKEM768X25519
 	mlkem_tests();
+#endif
+#ifdef USE_MLKEM1024
+	mlkem1024_tests();
 #endif
 	ed25519_tests();
 #ifdef WITH_ED301

@@ -273,6 +273,9 @@ ssh_kex2(struct ssh *ssh, char *host, struct sockaddr_storage *hostaddr,
 	ssh->kex->kex[KEX_ECDH_SHA2] = kex_gen_client;
 #endif
 #ifdef WITH_ED301
+#ifdef USE_MLKEM1024
+	ssh->kex->kex[KEX_MLKEM1024_X301_SHA512] = kex_gen_client;
+#endif
 	ssh->kex->kex[KEX_X301_SHA512] = kex_gen_client;
 #endif
 	ssh->kex->kex[KEX_C25519_SHA256] = kex_gen_client;

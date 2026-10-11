@@ -23,8 +23,12 @@
 #include "packet.h"
 #include "myproposal.h"
 #include "log.h"
+#include "digest.h"
 
 void kex_tests(void);
+#if defined(WITH_ED301) && defined(USE_MLKEM1024)
+static void mlkem1024x301_tests(void);
+#endif
 #ifdef WITH_ED301
 static void x301_kex_negative_tests(void);
 #endif
@@ -170,6 +174,9 @@ do_kex_with_key(char *kex, char *cipher, char *mac,
 	server2->kex->kex[KEX_ECDH_SHA2] = kex_gen_server;
 #endif /* WITH_OPENSSL */
 #ifdef WITH_ED301
+#ifdef USE_MLKEM1024
+	server2->kex->kex[KEX_MLKEM1024_X301_SHA512] = kex_gen_server;
+#endif
 	server2->kex->kex[KEX_X301_SHA512] = kex_gen_server;
 #endif
 	server2->kex->kex[KEX_C25519_SHA256] = kex_gen_server;
@@ -228,7 +235,8 @@ do_kex(char *kex)
 #endif /* WITH_OPENSSL */
 	do_kex_with_key(kex, NULL, NULL, NULL, KEY_ED25519, 256);
 #ifdef WITH_ED301
-	if (strcmp(kex, KEX_X301_SHA512_NAME) == 0)
+	if (strcmp(kex, KEX_X301_SHA512_NAME) == 0 ||
+	    strcmp(kex, KEX_MLKEM1024_X301_SHA512_NAME) == 0)
 		do_kex_with_key(kex, NULL, NULL, NULL,
 		    KEY_MLDSA44_ED25519, 512);
 #endif
@@ -246,13 +254,21 @@ kex_tests(void)
 {
 #ifdef WITH_ED301
 	if (ssh_x301_available())
+	{
 		do_kex(KEX_X301_SHA512_NAME);
+#ifdef USE_MLKEM1024
+		do_kex(KEX_MLKEM1024_X301_SHA512_NAME);
+#endif
+	}
 	else
 		fprintf(stderr, "SKIP X301 KEX: provider unavailable\n");
 #endif
 	do_kex("curve25519-sha256");
 #ifdef WITH_ED301
 	x301_kex_negative_tests();
+#ifdef USE_MLKEM1024
+	mlkem1024x301_tests();
+#endif
 #endif
 #ifdef WITH_OPENSSL
 	do_kex("ecdh-sha2-nistp256");
@@ -326,3 +342,107 @@ x301_kex_negative_tests(void)
 	    sizeof(x301_kex_errors) / sizeof(*x301_kex_errors));
 }
 #endif /* WITH_ED301 */
+
+#if defined(WITH_ED301) && defined(USE_MLKEM1024)
+static void
+mlkem1024x301_tests(void)
+{
+	struct kex kex;
+	struct sshbuf *reply = NULL, *server_secret = NULL;
+	struct sshbuf *client_secret = NULL, *input, *encoded;
+	u_char combined[MLKEM1024_BYTES + crypto_x301_BYTES];
+	u_char expected[64], bytes[1607];
+	const u_char *hash;
+	size_t len, i;
+
+	if (!ssh_x301_available()) {
+		fprintf(stderr, "SKIP ML-KEM1024/X301 KEX primitives: "
+		    "provider unavailable\n");
+		return;
+	}
+	memset(&kex, 0, sizeof(kex));
+	kex.hash_alg = SSH_DIGEST_SHA512;
+	TEST_START("ML-KEM1024/X301 independent SHA512 combiner");
+	ASSERT_INT_EQ(kex_kem_mlkem1024x301_keypair(&kex), 0);
+	ASSERT_SIZE_T_EQ(sshbuf_len(kex.client_pub), 1606);
+	ASSERT_INT_EQ(kex_kem_mlkem1024x301_enc(&kex, kex.client_pub,
+	    &reply, &server_secret), 0);
+	ASSERT_SIZE_T_EQ(sshbuf_len(reply), 1606);
+	/* Recover each component separately, then assemble K in the test. */
+	ASSERT_INT_EQ(crypto_kem_mlkem1024_dec(combined, sshbuf_ptr(reply),
+	    kex.mlkem1024_client_key), 0);
+	ASSERT_INT_EQ(crypto_x301_shared(combined + MLKEM1024_BYTES,
+	    kex.x301_client_key,
+	    sshbuf_ptr(reply) + MLKEM1024_CIPHERTEXTBYTES), 0);
+	ASSERT_INT_EQ(crypto_hash_sha512(expected, combined, sizeof(combined)), 0);
+	ASSERT_PTR_NE(encoded = sshbuf_fromb(server_secret), NULL);
+	ASSERT_INT_EQ(sshbuf_get_string_direct(encoded, &hash, &len), 0);
+	ASSERT_SIZE_T_EQ(len, 64);
+	ASSERT_MEM_EQ(hash, expected, 64);
+	ASSERT_SIZE_T_EQ(sshbuf_len(encoded), 0);
+	ASSERT_INT_EQ(kex_kem_mlkem1024x301_dec(&kex, reply,
+	    &client_secret), 0);
+	ASSERT_SIZE_T_EQ(sshbuf_len(client_secret), sshbuf_len(server_secret));
+	ASSERT_MEM_EQ(sshbuf_ptr(client_secret), sshbuf_ptr(server_secret),
+	    sshbuf_len(server_secret));
+	ASSERT_MEM_ZERO_EQ(kex.x301_client_key, sizeof(kex.x301_client_key));
+	ASSERT_MEM_ZERO_EQ(kex.mlkem1024_client_key,
+	    sizeof(kex.mlkem1024_client_key));
+	sshbuf_free(kex.client_pub);
+	sshbuf_free(encoded);
+	sshbuf_free(reply);
+	sshbuf_free(server_secret);
+	sshbuf_free(client_secret);
+	reply = server_secret = client_secret = NULL;
+	TEST_DONE();
+
+	TEST_START("ML-KEM1024/X301 rejects lengths, modulus and weak X301");
+	for (i = 0; i < 7; i++) {
+		test_subtest_info("mutation %zu", i);
+		memset(&kex, 0, sizeof(kex));
+		kex.hash_alg = SSH_DIGEST_SHA512;
+		ASSERT_INT_EQ(kex_kem_mlkem1024x301_keypair(&kex), 0);
+		if (i < 4) {
+			memcpy(bytes, sshbuf_ptr(kex.client_pub), 1606);
+			bytes[1606] = 0;
+			len = i == 0 ? 1605 : i == 1 ? 1607 : 1606;
+			if (i == 2) { /* first encoded coefficient = 4095 */
+				bytes[0] = 0xff;
+				bytes[1] |= 0x0f;
+			}
+			if (i == 3)
+				memset(bytes + MLKEM1024_PUBLICKEYBYTES, 0, 38);
+			ASSERT_PTR_NE(input = sshbuf_from(bytes, len), NULL);
+			ASSERT_INT_NE(kex_kem_mlkem1024x301_enc(&kex, input,
+			    &reply, &server_secret), 0);
+			ASSERT_PTR_EQ(reply, NULL);
+			ASSERT_PTR_EQ(server_secret, NULL);
+		} else {
+			ASSERT_INT_EQ(kex_kem_mlkem1024x301_enc(&kex,
+			    kex.client_pub, &reply, &server_secret), 0);
+			memcpy(bytes, sshbuf_ptr(reply), 1606);
+			bytes[1606] = 0;
+			len = i == 4 ? 1605 : i == 5 ? 1607 : 1606;
+			if (i == 6)
+				memset(bytes + MLKEM1024_CIPHERTEXTBYTES, 0, 38);
+			ASSERT_PTR_NE(input = sshbuf_from(bytes, len), NULL);
+			ASSERT_INT_NE(kex_kem_mlkem1024x301_dec(&kex, input,
+			    &client_secret), 0);
+			ASSERT_PTR_EQ(client_secret, NULL);
+			ASSERT_MEM_ZERO_EQ(kex.x301_client_key,
+			    sizeof(kex.x301_client_key));
+			ASSERT_MEM_ZERO_EQ(kex.mlkem1024_client_key,
+			    sizeof(kex.mlkem1024_client_key));
+		}
+		sshbuf_free(input);
+		sshbuf_free(kex.client_pub);
+		sshbuf_free(reply);
+		sshbuf_free(server_secret);
+		reply = server_secret = NULL;
+		explicit_bzero(&kex, sizeof(kex));
+	}
+	TEST_DONE();
+	explicit_bzero(combined, sizeof(combined));
+	explicit_bzero(expected, sizeof(expected));
+}
+#endif /* WITH_ED301 && USE_MLKEM1024 */

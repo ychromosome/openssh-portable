@@ -827,6 +827,9 @@ do_ssh2_kex(struct ssh *ssh)
 	kex->kex[KEX_KEM_MLKEM768ECDH_SHA256] = kex_gen_server;
 #endif
 #ifdef WITH_ED301
+#ifdef USE_MLKEM1024
+	kex->kex[KEX_MLKEM1024_X301_SHA512] = kex_gen_server;
+#endif
 	kex->kex[KEX_X301_SHA512] = kex_gen_server;
 #endif
 	kex->kex[KEX_C25519_SHA256] = kex_gen_server;

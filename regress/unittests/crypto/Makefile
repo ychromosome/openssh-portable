@@ -3,7 +3,7 @@
 PROG=test_crypto
 SRCS=tests.c
 SRCS+=test_mldsa.c
-SRCS+=test_mlkem.c
+SRCS+=test_mlkem.c test_mlkem1024.c
 SRCS+=test_ed25519.c
 SRCS+=test_mldsa_eddsa.c
 

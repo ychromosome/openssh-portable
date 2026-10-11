@@ -52,6 +52,10 @@ struct kexalg {
 };
 static const struct kexalg kexalgs[] = {
 #ifdef WITH_ED301
+#ifdef USE_MLKEM1024
+	{ KEX_MLKEM1024_X301_SHA512_NAME, KEX_MLKEM1024_X301_SHA512,
+	    0, SSH_DIGEST_SHA512, KEX_IS_PQ },
+#endif
 	{ KEX_X301_SHA512_NAME, KEX_X301_SHA512, 0, SSH_DIGEST_SHA512,
 	    KEX_NOT_PQ },
 #endif
@@ -110,7 +114,8 @@ kex_alg_filter(const char *names)
 {
 #ifdef WITH_ED301
 	if (!ssh_x301_available())
-		return match_filter_denylist(names, KEX_X301_SHA512_NAME);
+		return match_filter_denylist(names, KEX_X301_SHA512_NAME ","
+		    KEX_MLKEM1024_X301_SHA512_NAME);
 #endif
 	return strdup(names);
 }

@@ -133,6 +133,20 @@ kex_proposal_populate_tests(void)
 	    KEX_X301_SHA512_NAME) != NULL, ssh_x301_available());
 	kex_proposal_free_entries(prop);
 	TEST_DONE();
+#ifdef USE_MLKEM1024
+	TEST_START("ML-KEM1024/X301 runtime KEX proposal filtering");
+	ASSERT_INT_EQ(kex_name_valid(KEX_MLKEM1024_X301_SHA512_NAME), 1);
+	ASSERT_INT_EQ(kex_is_pq_from_name(KEX_MLKEM1024_X301_SHA512_NAME), 1);
+	ASSERT_INT_EQ(kex_hash_from_name(KEX_MLKEM1024_X301_SHA512_NAME),
+	    SSH_DIGEST_SHA512);
+	kex_proposal_populate_entries(&ssh, prop,
+	    KEX_MLKEM1024_X301_SHA512_NAME ",mlkem768x25519-sha256",
+	    NULL, NULL, NULL, NULL);
+	ASSERT_INT_EQ(strstr(prop[PROPOSAL_KEX_ALGS],
+	    KEX_MLKEM1024_X301_SHA512_NAME) != NULL, ssh_x301_available());
+	kex_proposal_free_entries(prop);
+	TEST_DONE();
+#endif
 	TEST_START("Ed301 runtime host-key proposal filtering");
 	kex.server = 0;
 	ssh.compat = 0;

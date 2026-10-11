@@ -25,6 +25,9 @@
 #include "log.h"
 
 void kex_tests(void);
+#ifdef WITH_ED301
+static void x301_kex_negative_tests(void);
+#endif
 static int do_debug = 0;
 
 static int
@@ -166,6 +169,9 @@ do_kex_with_key(char *kex, char *cipher, char *mac,
 	server2->kex->kex[KEX_DH_GEX_SHA256] = kexgex_server;
 	server2->kex->kex[KEX_ECDH_SHA2] = kex_gen_server;
 #endif /* WITH_OPENSSL */
+#ifdef WITH_ED301
+	server2->kex->kex[KEX_X301_SHA512] = kex_gen_server;
+#endif
 	server2->kex->kex[KEX_C25519_SHA256] = kex_gen_server;
 	server2->kex->kex[KEX_KEM_SNTRUP761X25519_SHA512] = kex_gen_server;
 	server2->kex->kex[KEX_KEM_MLKEM768X25519_SHA256] = kex_gen_server;
@@ -222,6 +228,11 @@ do_kex(char *kex)
 #endif /* WITH_OPENSSL */
 	do_kex_with_key(kex, NULL, NULL, NULL, KEY_ED25519, 256);
 #ifdef WITH_ED301
+	if (strcmp(kex, KEX_X301_SHA512_NAME) == 0)
+		do_kex_with_key(kex, NULL, NULL, NULL,
+		    KEY_MLDSA44_ED25519, 512);
+#endif
+#ifdef WITH_ED301
 	if (ssh_ed301_available())
 		do_kex_with_key(kex, NULL, NULL, NULL, KEY_ED301, 304);
 	else
@@ -233,7 +244,16 @@ do_kex(char *kex)
 void
 kex_tests(void)
 {
+#ifdef WITH_ED301
+	if (ssh_x301_available())
+		do_kex(KEX_X301_SHA512_NAME);
+	else
+		fprintf(stderr, "SKIP X301 KEX: provider unavailable\n");
+#endif
 	do_kex("curve25519-sha256");
+#ifdef WITH_ED301
+	x301_kex_negative_tests();
+#endif
 #ifdef WITH_OPENSSL
 	do_kex("ecdh-sha2-nistp256");
 	do_kex("ecdh-sha2-nistp384");
@@ -255,3 +275,54 @@ kex_tests(void)
 # endif /* USE_SNTRUP761X25519 */
 #endif /* WITH_OPENSSL */
 }
+
+#ifdef WITH_ED301
+#include "x301-vectors.h"
+
+static void
+x301_kex_negative_tests(void)
+{
+	struct kex kex;
+	struct sshbuf *input, *reply = NULL, *secret = NULL;
+	u_char wrong[39] = { 0 };
+	size_t i;
+
+	if (!ssh_x301_available()) {
+		fprintf(stderr, "SKIP X301 KEX negatives: provider unavailable\n");
+		return;
+	}
+	memset(&kex, 0, sizeof(kex));
+	TEST_START("X301 KEX public lengths 37 and 39");
+	for (i = 37; i <= 39; i += 2) {
+		ASSERT_PTR_NE(input = sshbuf_from(wrong, i), NULL);
+		ASSERT_INT_NE(kex_x301_enc(&kex, input, &reply, &secret), 0);
+		ASSERT_PTR_EQ(reply, NULL);
+		ASSERT_PTR_EQ(secret, NULL);
+		ASSERT_INT_NE(kex_x301_dec(&kex, input, &secret), 0);
+		ASSERT_PTR_EQ(secret, NULL);
+		sshbuf_free(input);
+	}
+	TEST_DONE();
+	TEST_START("X301 KEX canonical, weak-point and weak-secret vectors");
+	for (i = 0; i < sizeof(x301_kex_errors) /
+	    sizeof(*x301_kex_errors); i++) {
+		test_subtest_info("%s", x301_kex_errors[i].id);
+		memcpy(kex.x301_client_key, x301_kex_errors[i].secret, 38);
+		ASSERT_PTR_NE(input = sshbuf_from(
+		    x301_kex_errors[i].public, 38), NULL);
+		ASSERT_INT_NE(kex_x301_dec(&kex, input, &secret), 0);
+		ASSERT_PTR_EQ(secret, NULL);
+		ASSERT_MEM_ZERO_EQ(kex.x301_client_key, 38);
+		if (x301_kex_errors[i].invalid_public) {
+			ASSERT_INT_NE(kex_x301_enc(&kex, input, &reply,
+			    &secret), 0);
+			ASSERT_PTR_EQ(reply, NULL);
+			ASSERT_PTR_EQ(secret, NULL);
+		}
+		sshbuf_free(input);
+	}
+	TEST_DONE();
+	fprintf(stderr, "X301 KEX negatives: 2 lengths, %zu vectors PASS\n",
+	    sizeof(x301_kex_errors) / sizeof(*x301_kex_errors));
+}
+#endif /* WITH_ED301 */

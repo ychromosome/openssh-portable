@@ -211,7 +211,7 @@ assemble_algorithms(ServerOptions *o)
 
 	all_cipher = cipher_alg_list(',', 0);
 	all_mac = mac_alg_list(',');
-	all_kex = kex_alg_list(',');
+	all_kex = kex_alg_list_all(',');
 	all_key = sshkey_alg_list(0, 0, 1, ',');
 	all_sig = sshkey_alg_list(0, 1, 1, ',');
 	/* remove unsupported algos from default lists */
@@ -227,7 +227,18 @@ assemble_algorithms(ServerOptions *o)
 	} while (0)
 	ASSEMBLE(ciphers, def_cipher, all_cipher);
 	ASSEMBLE(macs, def_mac, all_mac);
-	ASSEMBLE(kex_algorithms, def_kex, all_kex);
+	/* Preserve an explicit list emptied by runtime filtering on reassembly. */
+	if (o->kex_algorithms == NULL ||
+	    *o->kex_algorithms != '\0')
+		ASSEMBLE(kex_algorithms, def_kex, all_kex);
+	{
+		char *filtered = kex_alg_filter(o->kex_algorithms);
+
+		if (filtered == NULL)
+			fatal_f("kex_alg_filter");
+		free(o->kex_algorithms);
+		o->kex_algorithms = filtered;
+	}
 	ASSEMBLE(hostkeyalgorithms, def_key, all_key);
 	ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
 	ASSEMBLE(pubkey_accepted_algos, def_key, all_key);

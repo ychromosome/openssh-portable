@@ -117,6 +117,11 @@ kex_gen_client(struct ssh *ssh)
 		r = kex_kem_mlkem768ecdh_keypair(kex);
 		break;
 #endif /* WITH_OPENSSL */
+#ifdef WITH_ED301
+	case KEX_X301_SHA512:
+		r = kex_x301_keypair(kex);
+		break;
+#endif
 	case KEX_C25519_SHA256:
 		r = kex_c25519_keypair(kex);
 		break;
@@ -196,6 +201,11 @@ input_kex_gen_reply(int type, uint32_t seq, struct ssh *ssh)
 		    &shared_secret);
 		break;
 #endif /* WITH_OPENSSL */
+#ifdef WITH_ED301
+	case KEX_X301_SHA512:
+		r = kex_x301_dec(kex, server_blob, &shared_secret);
+		break;
+#endif
 	case KEX_C25519_SHA256:
 		r = kex_c25519_dec(kex, server_blob, &shared_secret);
 		break;
@@ -255,6 +265,9 @@ input_kex_gen_reply(int type, uint32_t seq, struct ssh *ssh)
 	/* success */
 out:
 	explicit_bzero(hash, sizeof(hash));
+#ifdef WITH_ED301
+	explicit_bzero(kex->x301_client_key, sizeof(kex->x301_client_key));
+#endif
 	explicit_bzero(kex->c25519_client_key, sizeof(kex->c25519_client_key));
 	explicit_bzero(kex->sntrup761_client_key,
 	    sizeof(kex->sntrup761_client_key));
@@ -323,6 +336,12 @@ input_kex_gen_init(int type, uint32_t seq, struct ssh *ssh)
 		    &server_pubkey, &shared_secret);
 		break;
 #endif /* WITH_OPENSSL */
+#ifdef WITH_ED301
+	case KEX_X301_SHA512:
+		r = kex_x301_enc(kex, client_pubkey, &server_pubkey,
+		    &shared_secret);
+		break;
+#endif
 	case KEX_C25519_SHA256:
 		r = kex_c25519_enc(kex, client_pubkey, &server_pubkey,
 		    &shared_secret);

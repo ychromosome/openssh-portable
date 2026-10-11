@@ -22,6 +22,7 @@
 #include "sshbuf.h"
 #include "kex.h"
 #include "crypto_api.h"
+#include "digest.h"
 #include "myproposal.h"
 #include "packet.h"
 #include "xmalloc.h"
@@ -119,6 +120,19 @@ kex_proposal_populate_tests(void)
 	TEST_DONE();
 
 #ifdef WITH_ED301
+	TEST_START("X301 runtime availability and configuration names");
+	ASSERT_INT_EQ(kex_name_valid(KEX_X301_SHA512_NAME), 1);
+	ASSERT_INT_EQ(kex_hash_from_name(KEX_X301_SHA512_NAME),
+	    SSH_DIGEST_SHA512);
+	kex.server = 0;
+	ssh.compat = 0;
+	kex_proposal_populate_entries(&ssh, prop,
+	    KEX_X301_SHA512_NAME ",curve25519-sha256", NULL, NULL,
+	    NULL, NULL);
+	ASSERT_INT_EQ(strstr(prop[PROPOSAL_KEX_ALGS],
+	    KEX_X301_SHA512_NAME) != NULL, ssh_x301_available());
+	kex_proposal_free_entries(prop);
+	TEST_DONE();
 	TEST_START("Ed301 runtime host-key proposal filtering");
 	kex.server = 0;
 	ssh.compat = 0;

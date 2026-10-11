@@ -3047,7 +3047,7 @@ fill_default_options(Options * options)
 	/* Expand KEX name lists */
 	all_cipher = cipher_alg_list(',', 0);
 	all_mac = mac_alg_list(',');
-	all_kex = kex_alg_list(',');
+	all_kex = kex_alg_list_all(',');
 	all_key = sshkey_alg_list(0, 0, 1, ',');
 	all_sig = sshkey_alg_list(0, 1, 1, ',');
 	/* remove unsupported algos from default lists */
@@ -3067,7 +3067,18 @@ fill_default_options(Options * options)
 	options->kex_algorithms_set = options->kex_algorithms != NULL;
 	ASSEMBLE(ciphers, def_cipher, all_cipher);
 	ASSEMBLE(macs, def_mac, all_mac);
-	ASSEMBLE(kex_algorithms, def_kex, all_kex);
+	/* Preserve an explicit list emptied by runtime filtering on reassembly. */
+	if (options->kex_algorithms == NULL ||
+	    *options->kex_algorithms != '\0')
+		ASSEMBLE(kex_algorithms, def_kex, all_kex);
+	{
+		char *filtered = kex_alg_filter(options->kex_algorithms);
+
+		if (filtered == NULL)
+			fatal_f("kex_alg_filter");
+		free(options->kex_algorithms);
+		options->kex_algorithms = filtered;
+	}
 	ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
 	ASSEMBLE(pubkey_accepted_algos, def_key, all_key);
 	ASSEMBLE(ca_sign_algorithms, def_sig, all_sig);

@@ -951,6 +951,7 @@ main(int ac, char **av)
 	seed_rng();
 #ifdef WITH_ED301
 	(void)ssh_ed301_available();
+	(void)ssh_x301_available();
 #endif
 
 	/* If requested, redirect the logs to the specified logfile. */

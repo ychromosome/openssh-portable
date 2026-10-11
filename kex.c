@@ -112,7 +112,14 @@ kex_proposal_populate_entries(struct ssh *ssh, char *prop[PROPOSAL_MAX],
 	for (i = 0; i < PROPOSAL_MAX; i++) {
 		switch(i) {
 		case PROPOSAL_KEX_ALGS:
-			prop[i] = compat_kex_proposal(ssh, cp);
+			{
+				char *kexnames = kex_alg_filter(cp);
+
+				if (kexnames == NULL)
+					fatal_f("kex_alg_filter");
+				prop[i] = compat_kex_proposal(ssh, kexnames);
+				free(kexnames);
+			}
 			break;
 		case PROPOSAL_ENC_ALGS_CTOS:
 		case PROPOSAL_ENC_ALGS_STOC:
@@ -800,6 +807,9 @@ kex_free(struct kex *kex)
 	free(kex->hostkey_alg);
 	free(kex->name);
 	free(kex->server_sig_algs);
+#ifdef WITH_ED301
+	explicit_bzero(kex->x301_client_key, sizeof(kex->x301_client_key));
+#endif
 	free(kex);
 }
 

@@ -24,10 +24,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef WITH_ED301
+#define X301_KEX_ALG "x301-sha512@eirindeval.de,"
+#else
+#define X301_KEX_ALG ""
+#endif
+
 #define KEX_SERVER_KEX	\
 	"mlkem768x25519-sha256," \
 	"sntrup761x25519-sha512," \
 	"sntrup761x25519-sha512@openssh.com," \
+	X301_KEX_ALG \
 	"curve25519-sha256," \
 	"curve25519-sha256@libssh.org," \
 	"ecdh-sha2-nistp256," \

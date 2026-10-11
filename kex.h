@@ -60,6 +60,8 @@
 #define	KEX_MLKEM768X25519_SHA256	"mlkem768x25519-sha256"
 #define	KEX_MLKEM768NISTP256_SHA256	"mlkem768nistp256-sha256"
 
+#define KEX_X301_SHA512_NAME "x301-sha512@eirindeval.de"
+
 #define COMP_NONE	0
 #define COMP_DELAYED	2
 
@@ -98,6 +100,7 @@ enum kex_exchange {
 	KEX_KEM_SNTRUP761X25519_SHA512,
 	KEX_KEM_MLKEM768X25519_SHA256,
 	KEX_KEM_MLKEM768ECDH_SHA256,
+	KEX_X301_SHA512,
 	KEX_MAX
 };
 
@@ -182,6 +185,9 @@ struct kex {
 	u_int	min, max, nbits;	/* GEX */
 	EC_KEY	*ec_client_key;		/* ECDH */
 	const EC_GROUP *ec_group;	/* ECDH */
+#ifdef WITH_ED301
+	u_char x301_client_key[crypto_x301_SECRETBYTES];
+#endif
 	u_char c25519_client_key[CURVE25519_SIZE]; /* 25519 + KEM */
 	u_char c25519_client_pubkey[CURVE25519_SIZE]; /* 25519 */
 	u_char sntrup761_client_key[crypto_kem_sntrup761_SECRETKEYBYTES]; /* KEM */
@@ -196,6 +202,8 @@ int	 kex_nid_from_name(const char *);
 int	 kex_is_pq_from_name(const char *);
 int	 kex_names_valid(const char *);
 char	*kex_alg_list(char);
+char	*kex_alg_list_all(char);
+char	*kex_alg_filter(const char *);
 char	*kex_names_cat(const char *, const char *);
 int	 kex_has_any_alg(const char *, const char *);
 int	 kex_assemble_names(char **, const char *, const char *);
@@ -247,6 +255,16 @@ int	 kex_ecdh_enc(struct kex *, const struct sshbuf *, struct sshbuf **,
     struct sshbuf **);
 int	 kex_ecdh_dec(struct kex *, const struct sshbuf *, struct sshbuf **);
 
+#ifdef WITH_ED301
+int	 kex_x301_keypair(struct kex *);
+int	 kex_x301_enc(struct kex *, const struct sshbuf *, struct sshbuf **,
+	    struct sshbuf **);
+int	 kex_x301_dec(struct kex *, const struct sshbuf *, struct sshbuf **);
+int	 kexx301_shared_key_ext(const u_char [crypto_x301_SECRETBYTES],
+	    const u_char [crypto_x301_PUBLICBYTES], struct sshbuf *, int);
+int	 kexx301_shared_key(const u_char [crypto_x301_SECRETBYTES],
+	    const u_char [crypto_x301_PUBLICBYTES], struct sshbuf *);
+#endif
 int	 kex_c25519_keypair(struct kex *);
 int	 kex_c25519_enc(struct kex *, const struct sshbuf *, struct sshbuf **,
     struct sshbuf **);

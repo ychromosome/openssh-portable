@@ -51,6 +51,10 @@ struct kexalg {
 	int pq_alg;
 };
 static const struct kexalg kexalgs[] = {
+#ifdef WITH_ED301
+	{ KEX_X301_SHA512_NAME, KEX_X301_SHA512, 0, SSH_DIGEST_SHA512,
+	    KEX_NOT_PQ },
+#endif
 #ifdef WITH_OPENSSL
 	{ KEX_DH1, KEX_DH_GRP1_SHA1, 0, SSH_DIGEST_SHA1, KEX_NOT_PQ },
 	{ KEX_DH14_SHA1, KEX_DH_GRP14_SHA1, 0, SSH_DIGEST_SHA1, KEX_NOT_PQ },
@@ -88,7 +92,7 @@ static const struct kexalg kexalgs[] = {
 };
 
 char *
-kex_alg_list(char sep)
+kex_alg_list_all(char sep)
 {
 	char *ret = NULL;
 	const struct kexalg *k;
@@ -97,6 +101,36 @@ kex_alg_list(char sep)
 	for (k = kexalgs; k->name != NULL; k++)
 		xextendf(&ret, sep_str, "%s", k->name);
 
+	return ret;
+}
+
+/* Runtime filtering does not change the set of valid configuration names. */
+char *
+kex_alg_filter(const char *names)
+{
+#ifdef WITH_ED301
+	if (!ssh_x301_available())
+		return match_filter_denylist(names, KEX_X301_SHA512_NAME);
+#endif
+	return strdup(names);
+}
+
+char *
+kex_alg_list(char sep)
+{
+	char *all, *ret, *p;
+
+	/* Filters operate on comma-separated names, irrespective of output sep. */
+	if ((all = kex_alg_list_all(',')) == NULL)
+		return NULL;
+	ret = kex_alg_filter(all);
+	free(all);
+	if (ret != NULL && sep != ',') {
+		for (p = ret; *p != '\0'; p++) {
+			if (*p == ',')
+				*p = sep;
+		}
+	}
 	return ret;
 }
 

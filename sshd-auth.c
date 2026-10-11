@@ -476,6 +476,7 @@ main(int ac, char **av)
 	seed_rng();
 #ifdef WITH_ED301
 	(void)ssh_ed301_available();
+	(void)ssh_x301_available();
 #endif
 
 #ifndef HAVE_SETPROCTITLE
@@ -824,6 +825,9 @@ do_ssh2_kex(struct ssh *ssh)
 	kex->kex[KEX_DH_GEX_SHA256] = kexgex_server;
 	kex->kex[KEX_ECDH_SHA2] = kex_gen_server;
 	kex->kex[KEX_KEM_MLKEM768ECDH_SHA256] = kex_gen_server;
+#endif
+#ifdef WITH_ED301
+	kex->kex[KEX_X301_SHA512] = kex_gen_server;
 #endif
 	kex->kex[KEX_C25519_SHA256] = kex_gen_server;
 	kex->kex[KEX_KEM_SNTRUP761X25519_SHA512] = kex_gen_server;

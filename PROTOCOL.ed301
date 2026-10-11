@@ -1,0 +1,286 @@
+This document specifies the Ed301-EdDSA and X301 algorithms for the SSH
+protocol, as implemented on the "ed301" branch of OpenSSH-portable.
+
+STATUS: DRAFT. Experimental and not standardised. The names below are
+private-use names in the "eirindeval.de" namespace (RFC 4251 section 6),
+not IANA registrations. This profile is not interoperable with any other
+SSH implementation.
+
+The design mirrors the existing OpenSSH algorithms one-to-one:
+
+  Ed25519 template                     Ed301 profile
+  ----------------------------------   ----------------------------------
+  ssh-ed25519                          ssh-ed301@eirindeval.de
+  ssh-ed25519-cert-v01@openssh.com     ssh-ed301-cert-v01@eirindeval.de
+  curve25519-sha256                    x301-sha512@eirindeval.de
+  mlkem768x25519-sha256                mlkem1024x301-sha512@eirindeval.de
+  ssh-mldsa44-ed25519                  ssh-mldsa65-ed301@eirindeval.de
+  ssh-mldsa44-ed25519-cert             ssh-mldsa65-ed301-cert-v01@eirindeval.de
+
+Structure, wire layout and processing rules follow the template. Wherever
+possible this profile follows the RFCs for the two standardised Edwards
+curves: [RFC8032] for EdDSA, [RFC8709] for ssh-ed25519/ssh-ed448 and
+[RFC8731] for curve25519-sha256/curve448-sha512. Where Ed25519 and Ed448
+differ, the Ed448 rules apply, because Ed301 uses the Ed448 domain
+construction (always-present context) and its security level is closer to
+Ed448 than to Ed25519 (SHA-512, as in curve448-sha512).
+Parameters are chosen for the Ed301 security level (approximately 2^149
+generic attack cost), not copied from the 128-bit template: SHA-512 instead
+of SHA-256, ML-KEM-1024 instead of ML-KEM-768, ML-DSA-65 instead of ML-DSA-44.
+
+0. References
+
+[ED301]   Ed301-EdDSA v2 byte contract, specifications/Ed301-EdDSA-v2.md and
+          specifications/CURRENT_PROFILE.md in
+          https://github.com/ychromosome/ed301 (branch Testing, reviewed at
+          commit 9ef3fc21e0f79331f1c885907cf2805f5d2698aa).
+[X301]    X301 v2 byte contract, specifications/X301-v2.md, same source.
+[RFC4251] SSH Protocol Architecture (data types, private-use names).
+[RFC4252] SSH Authentication Protocol.
+[RFC4253] SSH Transport Layer Protocol.
+[RFC8032] Edwards-Curve Digital Signature Algorithm (EdDSA).
+[RFC5656] ECC in SSH (SSH_MSG_KEX_ECDH_INIT / _REPLY, section 4).
+[RFC8709] Ed25519 and Ed448 public key algorithms for SSH.
+[RFC8731] Curve25519 and Curve448 key exchange for SSH.
+[MLKEM-SSH] draft-ietf-sshm-mlkem-hybrid-kex (mlkem768x25519-sha256).
+[COMPSIG-SSH] draft-miller-sshm-mldsa44-ed25519-composite-sigs-00.
+[COMPSIG] draft-ietf-lamps-pq-composite-sigs-18.
+[FIPS203] ML-KEM.  [FIPS204] ML-DSA.
+PROTOCOL.key, PROTOCOL.sshsig and PROTOCOL.agent in this tree.
+
+1. Ed301 parameters used by this profile
+
+All values come from [ED301]:
+
+  seed / private key material   38 bytes
+  public key (compressed point) 38 bytes
+  signature (R || S)            76 bytes
+  signature context             binary string, 0..255 bytes
+
+Signing is deterministic and one-shot ("pure" EdDSA, no prehash).
+The Ed301 domain string is always present:
+  dom(C) = "SigEd301-v2" || 0x00 || octet(len(C)) || C
+
+1.1. SSH signature context
+
+Every Ed301 signature made under this profile, except the composite
+component in section 3, uses the empty context:
+
+  C_SSH = "" (zero-length)
+
+This is the [RFC8709] rule for ssh-ed448, which uses Ed448 (always-present
+context, [RFC8032] section 5.2) with an empty context. The domain string
+dom(C_SSH) is still included, as [ED301] requires. Separation from other
+protocols comes from the structure of the signed SSH data (session
+identifier, "SSHSIG" magic), as for ssh-ed25519 and ssh-ed448. It does not
+come from the EdDSA context.
+
+2. Public key algorithm "ssh-ed301@eirindeval.de"
+
+2.1. Public key format (as [RFC8709] section 4)
+
+  string  "ssh-ed301@eirindeval.de"
+  string  key          38 bytes, compressed Ed301 point
+
+A receiver MUST reject a key string whose length is not 38. Before using a
+public key for verification, a receiver MUST apply the [ED301] public key
+rules: canonical encoding, not the identity, and member of the prime-order
+subgroup. An implementation MAY apply these checks when it parses the key.
+
+2.2. Signature format (as [RFC8709] section 6)
+
+  string  "ssh-ed301@eirindeval.de"
+  string  signature    76 bytes, R || S as in [ED301]
+
+A receiver MUST reject a signature blob with trailing data, a signature
+string whose length is not 76, or an algorithm name that does not match.
+
+2.3. Signing and verification
+
+The signer computes Ed301-Sign(seed, M, C_SSH) over the exact data that
+SSH supplies to the signature operation (for example the exchange hash H,
+or the user authentication data of [RFC4252] section 7). No additional
+hashing is done.
+
+The verifier accepts exactly when Ed301-Verify(pk, M, sig, C_SSH)
+succeeds under [ED301]. That includes its cofactored equation
+[4S]G = [4]R + [4k]A and the canonical encoding rules for R and S.
+
+2.4. Private key format
+
+In the openssh-key-v1 container (PROTOCOL.key) and the agent protocol, the
+key-type-specific private fields are (same layout as ssh-ed25519):
+
+  string  pk           38 bytes
+  string  sk           76 bytes = seed (38) || pk (38)
+
+This matches the Ed25519 convention, where sk = seed (32) || pk (32). Only
+the seed is secret. The loader MUST check that pk equals the public key
+derived from the seed, and that the trailing 38 bytes of sk equal pk.
+Signing with a mismatched public key would expose the EdDSA "double public
+key" oracle. Ed301 signing always uses the public key derived from the seed.
+
+2.5. Certificates
+
+"ssh-ed301-cert-v01@eirindeval.de" uses the OpenSSH certificate format
+exactly as "ssh-ed25519-cert-v01@openssh.com" does. The type-specific key
+field is:
+
+  string  pk           38 bytes
+
+The CA signature on a certificate uses the CA key's own algorithm. An Ed301
+CA uses the signature format in 2.2 with context C_SSH.
+
+3. Composite public key algorithm "ssh-mldsa65-ed301@eirindeval.de"
+
+This follows [COMPSIG-SSH] and [COMPSIG] as implemented in
+ssh-mldsa-eddsa.c, with ML-DSA-65 in place of ML-DSA-44 and Ed301 in place
+of Ed25519.
+
+3.1. Constants
+
+  Prefix = ASCII "CompositeAlgorithmSignatures2025"
+  Label  = ASCII "COMPSIG-MLDSA65-Ed301-SHA512"
+
+  ML-DSA-65 public key 1952, signature 3309, seed 32 bytes [FIPS204]
+  composite public key  = mldsa_pk (1952) || ed301_pk (38)    = 1990 bytes
+  composite signature   = mldsa_sig (3309) || ed301_sig (76)  = 3385 bytes
+  composite private key = mldsa_seed (32) || ed301_seed (38)  =   70 bytes
+
+3.2. Formats
+
+  Public key:  string "ssh-mldsa65-ed301@eirindeval.de", string pk (1990)
+  Signature:   string "ssh-mldsa65-ed301@eirindeval.de", string sig (3385)
+  Private key fields (non-certificate): string pk (1990), string sk (70)
+  Private key fields (certificate):      string sk (70)
+
+The private key layout follows ssh_mldsa44_ed25519_serialize_private().
+
+3.3. Signing
+
+For the SSH data M, with the composite context ctx set to empty (as in
+the template):
+
+  M' = Prefix || Label || octet(len(ctx)) || ctx || SHA-512(M)
+
+  mldsa_sig = ML-DSA-65.Sign(mldsa_sk, M', ctx = Label)    hedged, [FIPS204]
+  ed301_sig = Ed301-Sign(ed301_seed, M', C = Label)        [ED301]
+  sig       = mldsa_sig || ed301_sig
+
+Difference from the template: Ed25519 has no context input, so the
+template signs M' with plain Ed25519. Ed301 does have a context, and it
+receives Label, the same way ML-DSA does. A component Ed301 signature
+therefore never verifies as a standalone "ssh-ed301@eirindeval.de"
+signature (empty context C_SSH), which defeats component stripping.
+
+3.4. Verification
+
+The verifier recomputes M' and accepts only if BOTH components verify:
+ML-DSA-65 under ctx = Label, and Ed301 under C = Label using the [ED301]
+public key rules.
+
+4. Key exchange "x301-sha512@eirindeval.de"
+
+This is [RFC8731] with X301 substituted for X25519/X448. HASH is SHA-512,
+as for curve448-sha512.
+The messages are SSH_MSG_KEX_ECDH_INIT and SSH_MSG_KEX_ECDH_REPLY
+([RFC5656] section 4):
+
+  Client:  string Q_C   38 bytes, X301 public value
+  Server:  string K_S, string Q_S (38 bytes), string signature of H
+
+Ephemeral keys are generated by the [X301] KeyGen procedure. It draws 38
+random bytes and resamples only on the excluded weak-secret condition.
+
+Both sides compute the 38-byte output X301(own_secret, peer_Q) under [X301].
+They MUST abort the key exchange if:
+  - a received Q has a length other than 38;
+  - a received Q is not canonical under [X301] (bits 301..303 set, or
+    u >= p). Such a value is never masked or reduced;
+  - the X301 operation fails, including a result at infinity or an
+    all-zero output.
+
+The 38 output bytes are interpreted as an unsigned integer in network byte
+order and encoded as an mpint to form K, exactly as [RFC8731] section 3.1
+does for X25519. The exchange hash H is computed with SHA-512 over the
+fields of [RFC5656] section 4.
+
+5. Key exchange "mlkem1024x301-sha512@eirindeval.de"
+
+This is [MLKEM-SSH] with ML-KEM-1024 in place of ML-KEM-768, X301 in place
+of X25519, and SHA-512 as HASH. The message flow and processing are
+otherwise those of mlkem768x25519-sha256 as implemented in
+kexmlkem768x25519.c.
+
+5.1. Messages
+
+  SSH_MSG_KEX_HYBRID_INIT (client):
+    string C_INIT = C_PK2 || C_PK1
+       C_PK2  ML-KEM-1024 encapsulation key  1568 bytes
+       C_PK1  X301 public value                38 bytes   (total 1606)
+
+  SSH_MSG_KEX_HYBRID_REPLY (server):
+    string K_S
+    string S_REPLY = S_CT2 || S_PK1
+       S_CT2  ML-KEM-1024 ciphertext         1568 bytes
+       S_PK1  X301 public value                38 bytes   (total 1606)
+    string signature of H
+
+ML-KEM comes first and the classical part second, as in the template.
+This is the same component order and length as the project's TLS hybrid
+group X301MLKEM1024 (NamedGroup 0xFE2F). The SSH combiner in 5.2 is
+SSH-specific, however.
+
+5.2. Shared secret
+
+  K_PQ = ML-KEM-1024 shared secret      32 bytes
+  K_CL = X301 output                    38 bytes, raw (no mpint)
+  K    = SHA-512(K_PQ || K_CL)          64 bytes, encoded as string
+
+The exchange hash H is computed with SHA-512. K is encoded as a string, not
+an mpint, as in [MLKEM-SSH].
+
+5.3. Checks
+
+The server MUST reject C_INIT unless it has exactly 1606 bytes. It MUST
+reject an encapsulation key that fails the [FIPS203] section 7.2 input
+check (modulus check). The client MUST reject S_REPLY unless it has exactly
+1606 bytes. The X301 abort conditions of section 4 apply to C_PK1 and
+S_PK1. A failure in either component aborts the key exchange. No partial
+or fallback secret is ever used.
+
+5.4. ML-KEM implementation
+
+ML-KEM-1024 is provided by the embedded libcrux extraction in both builds,
+like ML-KEM-768 for mlkem768x25519-sha256. It is not taken from libcrypto.
+
+6. Implementation notes (non-normative)
+
+6.1. Backends
+
+As for Ed25519, the cryptographic primitives sit behind crypto_api.h and
+one of two backends is selected at build time:
+
+  WITH_OPENSSL     ed301-openssl.c: EVP with algorithm "Ed301-EdDSA" and
+                   "X301" from the openssl-provider-ed301 provider,
+                   activated by the openssl-provider-ed301-policy package.
+  !WITH_OPENSSL    Rust core of [ED301]/[X301] via a small C-ABI crate.
+
+ML-DSA-65 and ML-KEM-1024 always come from embedded libcrux.
+
+6.2. Runtime availability
+
+In the EVP backend the algorithms are available only when the provider is
+active in the default library context. Unlike Ed25519, availability is
+therefore probed at run time. If the provider is missing, the algorithms
+are removed from the default and offered algorithm lists, `ssh -Q` does not
+list them, and ssh-keygen reports a clear error. Their absence is never a
+fatal error for other algorithms.
+
+6.3. Out of scope
+
+  - FIDO/U2F variants (sk-ssh-ed25519@openssh.com): no authenticator
+    implements Ed301.
+  - PKCS#11: no token implements Ed301.
+  - SSHFP DNS records: Ed301 has no IANA SSHFP algorithm number.
+

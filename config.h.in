@@ -1998,6 +1998,9 @@
 /* Use btmp to log bad logins */
 #undef USE_BTMP
 
+/* Enable provider-based Ed301 and X301 crypto API */
+#undef USE_ED301
+
 /* Use libedit for sftp */
 #undef USE_LIBEDIT
 

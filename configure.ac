@@ -3358,6 +3358,30 @@ if test "x$openssl" = "xyes" ; then
 		]
 	)
 
+	# Check the provider-based Ed301/X301 API, not runtime availability.
+	AC_MSG_CHECKING([whether libcrypto has the Ed301/X301 EVP API])
+	AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM([[
+	#include <openssl/evp.h>
+	#include <openssl/core_names.h>
+	#include <openssl/params.h>
+		]], [[
+		EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL,
+		    "Ed301-EdDSA", NULL);
+		OSSL_PARAM params[2];
+		params[0] = OSSL_PARAM_construct_octet_string(
+		    OSSL_SIGNATURE_PARAM_CONTEXT_STRING, NULL, 0);
+		params[1] = OSSL_PARAM_construct_end();
+		EVP_PKEY_CTX_free(ctx);
+		]])],
+		[
+			AC_MSG_RESULT([yes])
+			AC_DEFINE([USE_ED301], [1],
+			    [Enable provider-based Ed301 and X301 crypto API])
+		],
+		[ AC_MSG_RESULT([no]) ]
+	)
+
 	case "$openssl_impl" in
 	aws-lc|boringssl)
 		# Brainpool does not work with AWC-LS or BoringSSL.

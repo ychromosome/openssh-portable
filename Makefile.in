@@ -103,7 +103,7 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
 	poly1305.o chacha.o cipher-chachapoly.o cipher-chachapoly-libcrypto.o \
 	ssh-ed25519.o digest-openssl.o digest-libc.o \
 	libcrux-mlkem-mldsa.o ssh-mldsa-eddsa.o \
-	hmac.o ed25519.o ed25519-openssl.o \
+	hmac.o ed25519.o ed25519-openssl.o ed301-openssl.o x301-openssl.o \
 	kex.o kex-names.o kexdh.o kexgex.o kexecdh.o kexc25519.o \
 	kexgexc.o kexgexs.o kexmlkem768ecdh.o \
 	kexsntrup761x25519.o kexmlkem768x25519.o sntrup761.o kexgen.o \
@@ -701,6 +701,8 @@ regress/unittests/match/test_match$(EXEEXT): \
 	    -lssh -lopenbsd-compat -lssh -lopenbsd-compat $(TESTLIBS)
 
 UNITTESTS_TEST_CRYPTO_OBJS=\
+	regress/unittests/crypto/test_ed301.o \
+	regress/unittests/crypto/test_x301.o \
 	regress/unittests/crypto/test_ed25519.o \
 	regress/unittests/crypto/test_mldsa.o \
 	regress/unittests/crypto/test_mldsa_eddsa.o \

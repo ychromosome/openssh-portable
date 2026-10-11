@@ -20045,6 +20045,51 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 
+	# Check the provider-based Ed301/X301 API, not runtime availability.
+	{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether libcrypto has the Ed301/X301 EVP API" >&5
+printf %s "checking whether libcrypto has the Ed301/X301 EVP API... " >&6; }
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+	#include <openssl/evp.h>
+	#include <openssl/core_names.h>
+	#include <openssl/params.h>
+
+int
+main (void)
+{
+
+		EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL,
+		    "Ed301-EdDSA", NULL);
+		OSSL_PARAM params[2];
+		params[0] = OSSL_PARAM_construct_octet_string(
+		    OSSL_SIGNATURE_PARAM_CONTEXT_STRING, NULL, 0);
+		params[1] = OSSL_PARAM_construct_end();
+		EVP_PKEY_CTX_free(ctx);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+
+			{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf '%s\n' "yes" >&6; }
+
+printf '%s\n' "#define USE_ED301 1" >>confdefs.h
+
+
+else case e in #(
+  e)  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+	 ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+
 	case "$openssl_impl" in
 	aws-lc|boringssl)
 		# Brainpool does not work with AWC-LS or BoringSSL.

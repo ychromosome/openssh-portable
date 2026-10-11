@@ -1,0 +1,23 @@
+Ed301/X301 test vector provenance
+================================
+
+Repository: https://github.com/ychromosome/ed301
+Source commit: 9ef3fc21e0f79331f1c885907cf2805f5d2698aa
+The JSON files are byte-for-byte copies of vectors/ at that commit.
+
+SHA-256:
+4dbbd93f5814f4e676b8007b13973037a7924872d46d328cdaeb314cd3190e82  ed301-eddsa-v2.json
+b675f677f0d717a09f3c1cc55bf0c2ad97d17ca14a7890565a41916222cc80f0  x301-v2.json
+
+The tests use the existing load_text_file()/get_json_string() helpers,
+with array/object, boolean, integer and hex helpers for this corpus.
+Fixed-size crypto_api.h calls cannot express variable key/signature lengths;
+those vectors exercise the same provider's EVP import/verification boundary
+with their actual lengths. No vector is padded or truncated.
+
+point_decoding.accepted describes point decoding, not public-key policy.
+Identity and torsion points decode but are invalid Ed301 public keys. These
+entries are checked against the stricter public-key import policy; the base
+point imports successfully. Field/scalar codec internals are not a separate
+SSH primitive and are not reimplemented. X301 evaluations and all iteration
+checkpoints are covered in addition to the required key/DH/error categories.

@@ -69,6 +69,39 @@ int	crypto_sign_ed25519_keypair(unsigned char *, unsigned char *);
 int	crypto_sign_ed25519_seed_keypair(unsigned char *, unsigned char *,
     const unsigned char *);
 
+#if defined(WITH_OPENSSL) && defined(USE_ED301)
+#define crypto_sign_ed301_SECRETKEYBYTES 76U /* seed (38) || pk (38) */
+#define crypto_sign_ed301_PUBLICKEYBYTES 38U
+#define crypto_sign_ed301_SEEDBYTES 38U
+#define crypto_sign_ed301_BYTES 76U
+#define crypto_sign_ed301_CONTEXTMAXBYTES 255U
+
+int	crypto_sign_ed301_keypair(unsigned char *, unsigned char *);
+int	crypto_sign_ed301_seed_keypair(unsigned char *, unsigned char *,
+    const unsigned char *);
+int	crypto_sign_ed301_detached(unsigned char *, unsigned long long *,
+    const unsigned char *, unsigned long long, const unsigned char *);
+int	crypto_sign_ed301_verify_detached(const unsigned char *,
+    const unsigned char *, unsigned long long, const unsigned char *);
+int	crypto_sign_ed301_detached_ctx(unsigned char *, unsigned long long *,
+    const unsigned char *, unsigned long long, const unsigned char *, size_t,
+    const unsigned char *);
+int	crypto_sign_ed301_verify_detached_ctx(const unsigned char *,
+    const unsigned char *, unsigned long long, const unsigned char *, size_t,
+    const unsigned char *);
+
+#define crypto_x301_SECRETBYTES 38U
+#define crypto_x301_PUBLICBYTES 38U
+#define crypto_x301_BYTES 38U
+
+int	crypto_x301_keypair(unsigned char *, unsigned char *);
+int	crypto_x301_public(unsigned char *, const unsigned char *);
+int	crypto_x301_shared(unsigned char *, const unsigned char *,
+    const unsigned char *);
+int	ssh_ed301_available(void);
+int	ssh_x301_available(void);
+#endif /* WITH_OPENSSL && USE_ED301 */
+
 #define crypto_kem_sntrup761_PUBLICKEYBYTES 1158
 #define crypto_kem_sntrup761_SECRETKEYBYTES 1763
 #define crypto_kem_sntrup761_CIPHERTEXTBYTES 1039

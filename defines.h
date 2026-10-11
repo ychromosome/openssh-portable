@@ -1023,8 +1023,8 @@ struct winsize {
 # define SKIP_PRIVDROP 1
 #endif
 
-#endif /* _DEFINES_H */
-
 #if defined(WITH_OPENSSL) && defined(USE_ED301)
 # define WITH_ED301 1
 #endif
+
+#endif /* _DEFINES_H */

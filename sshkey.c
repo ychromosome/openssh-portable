@@ -3358,7 +3358,7 @@ sshkey_private_to_blob_pem_pkcs8(struct sshkey *key, struct sshbuf *buf,
     int format, const char *_passphrase, const char *comment)
 {
 	int was_shielded = sshkey_is_shielded(key);
-	int success, r;
+	int success, r, shield_r;
 	int blen, len = strlen(_passphrase);
 	u_char *passphrase = (len > 0) ? (u_char *)_passphrase : NULL;
 	const EVP_CIPHER *cipher = (len > 0) ? EVP_aes_128_cbc() : NULL;
@@ -3401,6 +3401,21 @@ sshkey_private_to_blob_pem_pkcs8(struct sshkey *key, struct sshbuf *buf,
 			success = 1;
 		}
 		break;
+#ifdef WITH_ED301
+	case KEY_ED301:
+		if (format == SSHKEY_PRIVATE_PEM) {
+			r = SSH_ERR_INVALID_FORMAT;
+			goto out;
+		}
+		if (!ssh_ed301_available()) {
+			r = SSH_ERR_FEATURE_UNSUPPORTED;
+			goto out;
+		}
+		pkey = EVP_PKEY_new_raw_private_key_ex(NULL, "Ed301-EdDSA",
+		    NULL, key->ed301_sk, crypto_sign_ed301_SEEDBYTES);
+		success = pkey != NULL;
+		break;
+#endif
 #ifdef OPENSSL_HAS_ED25519
 	case KEY_ED25519:
 		if (format == SSHKEY_PRIVATE_PEM) {
@@ -3437,8 +3452,11 @@ sshkey_private_to_blob_pem_pkcs8(struct sshkey *key, struct sshbuf *buf,
 		goto out;
 	r = 0;
  out:
-	if (was_shielded)
-		r = sshkey_shield_private(key);
+	if (was_shielded) {
+		shield_r = sshkey_shield_private(key);
+		if (r == 0)
+			r = shield_r;
+	}
 	if (r == 0)
 		r = sshbuf_putb(buf, blob);
 
@@ -3456,14 +3474,10 @@ sshkey_private_to_fileblob(struct sshkey *key, struct sshbuf *blob,
     int format, const char *openssh_format_cipher, int openssh_format_rounds)
 {
 	switch (key->type) {
+#ifdef WITH_OPENSSL
 #ifdef WITH_ED301
 	case KEY_ED301:
-		if (format != SSHKEY_PRIVATE_OPENSSH)
-			return SSH_ERR_FEATURE_UNSUPPORTED;
-		return sshkey_private_to_blob2(key, blob, passphrase,
-		    comment, openssh_format_cipher, openssh_format_rounds);
 #endif
-#ifdef WITH_OPENSSL
 	case KEY_ECDSA:
 	case KEY_RSA:
 	case KEY_ED25519:
@@ -3591,6 +3605,13 @@ sshkey_parse_private_pem_fileblob(struct sshbuf *blob, int type,
 	int r;
 	RSA *rsa = NULL;
 	EC_KEY *ecdsa = NULL;
+#ifdef WITH_ED301
+	u_char seed[crypto_sign_ed301_SEEDBYTES];
+	size_t seedlen;
+
+	if (type == KEY_ED301 && !ssh_ed301_available())
+		return SSH_ERR_FEATURE_UNSUPPORTED;
+#endif
 
 	if (keyp != NULL)
 		*keyp = NULL;
@@ -3703,6 +3724,34 @@ sshkey_parse_private_pem_fileblob(struct sshbuf *blob, int type,
 		sshbuf_dump_data(prv->ed25519_sk, ED25519_SK_SZ, stderr);
 #endif
 #endif /* OPENSSL_HAS_ED25519 */
+#ifdef WITH_ED301
+	} else if (EVP_PKEY_is_a(pk, "Ed301-EdDSA") &&
+	    (type == KEY_UNSPEC || type == KEY_ED301)) {
+		if (!ssh_ed301_available()) {
+			r = SSH_ERR_FEATURE_UNSUPPORTED;
+			goto out;
+		}
+		if ((prv = sshkey_new(KEY_ED301)) == NULL ||
+		    (prv->ed301_sk = calloc(1, ED301_SK_SZ)) == NULL ||
+		    (prv->ed301_pk = calloc(1, ED301_PK_SZ)) == NULL) {
+			r = SSH_ERR_ALLOC_FAIL;
+			goto out;
+		}
+		seedlen = sizeof(seed);
+		if (!EVP_PKEY_get_raw_private_key(pk, seed, &seedlen)) {
+			r = SSH_ERR_LIBCRYPTO_ERROR;
+			goto out;
+		}
+		if (seedlen != sizeof(seed)) {
+			r = SSH_ERR_INVALID_FORMAT;
+			goto out;
+		}
+		if (crypto_sign_ed301_seed_keypair(prv->ed301_pk,
+		    prv->ed301_sk, seed) != 0) {
+			r = SSH_ERR_LIBCRYPTO_ERROR;
+			goto out;
+		}
+#endif
 	} else {
 		r = SSH_ERR_INVALID_FORMAT;
 		goto out;
@@ -3717,6 +3766,9 @@ sshkey_parse_private_pem_fileblob(struct sshbuf *blob, int type,
 	EVP_PKEY_free(pk);
 	RSA_free(rsa);
 	EC_KEY_free(ecdsa);
+#ifdef WITH_ED301
+	explicit_bzero(seed, sizeof(seed));
+#endif
 	sshkey_free(prv);
 	return r;
 }

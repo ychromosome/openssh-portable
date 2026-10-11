@@ -238,6 +238,82 @@ get_private(const char *n)
 
 
 #ifdef WITH_ED301
+#ifdef WITH_OPENSSL
+static void
+ed301_pkcs8_tests(void)
+{
+	struct sshkey *key = NULL, *parsed = NULL, *roundtrip = NULL;
+	struct sshkey *other = NULL;
+	struct sshbuf *pem, *file;
+	const char *passphrases[] = { "", "encrypted Ed301 PKCS8" };
+	const u_char msg[] = "Ed301 PKCS8 roundtrip";
+	u_char *sig = NULL;
+	size_t siglen, i;
+
+	if (!ssh_ed301_available()) {
+		TEST_START("Ed301 PKCS8 unavailable without provider");
+		ASSERT_PTR_NE(pem = sshbuf_new(), NULL);
+		ASSERT_INT_EQ(sshkey_parse_private_fileblob_type(pem,
+		    KEY_ED301, "", &parsed, NULL),
+		    SSH_ERR_FEATURE_UNSUPPORTED);
+		ASSERT_PTR_EQ(parsed, NULL);
+		sshbuf_free(pem);
+		TEST_DONE();
+		return;
+	}
+	ASSERT_INT_EQ(sshkey_generate(KEY_ED301, 304, &key), 0);
+	ASSERT_PTR_NE(pem = sshbuf_new(), NULL);
+	ASSERT_PTR_NE(file = sshbuf_new(), NULL);
+	for (i = 0; i < sizeof(passphrases) / sizeof(*passphrases); i++) {
+		TEST_START("Ed301 OpenSSH / PKCS8 private roundtrip");
+		test_subtest_info("encrypted %zu", i);
+		ASSERT_INT_EQ(sshkey_private_to_fileblob(key, pem,
+		    passphrases[i], "test", SSHKEY_PRIVATE_PKCS8,
+		    NULL, 0), 0);
+		ASSERT_INT_EQ(sshkey_parse_private_fileblob_type(pem,
+		    KEY_ED301, passphrases[i], &parsed, NULL), 0);
+		ASSERT_INT_EQ(sshkey_equal_public(key, parsed), 1);
+		if (i != 0) {
+			ASSERT_INT_EQ(sshkey_parse_private_fileblob_type(pem,
+			    KEY_ED301, "wrong passphrase", &roundtrip, NULL),
+			    SSH_ERR_KEY_WRONG_PASSPHRASE);
+			ASSERT_PTR_EQ(roundtrip, NULL);
+		}
+		ASSERT_INT_EQ(sshkey_private_to_fileblob(parsed, file, "",
+		    "test", SSHKEY_PRIVATE_OPENSSH, NULL, 0), 0);
+		ASSERT_INT_EQ(sshkey_parse_private_fileblob(file, "",
+		    &roundtrip, NULL), 0);
+		ASSERT_INT_EQ(sshkey_equal_public(key, roundtrip), 1);
+		ASSERT_INT_EQ(sshkey_sign(roundtrip, &sig, &siglen,
+		    msg, sizeof(msg), NULL, NULL, NULL, 0), 0);
+		ASSERT_INT_EQ(sshkey_verify(key, sig, siglen, msg,
+		    sizeof(msg), NULL, 0, NULL), 0);
+		free(sig);
+		sshkey_free(parsed);
+		sshkey_free(roundtrip);
+		parsed = roundtrip = NULL;
+		sshbuf_reset(pem);
+		sshbuf_reset(file);
+		TEST_DONE();
+	}
+	TEST_START("Ed301 refuses traditional PEM and wrong PKCS8 type");
+	ASSERT_INT_EQ(sshkey_shield_private(key), 0);
+	ASSERT_INT_EQ(sshkey_private_to_fileblob(key, pem, "", "test",
+	    SSHKEY_PRIVATE_PEM, NULL, 0), SSH_ERR_INVALID_FORMAT);
+	ASSERT_INT_EQ(sshkey_generate(KEY_ED25519, 256, &other), 0);
+	ASSERT_INT_EQ(sshkey_private_to_fileblob(other, pem, "", "test",
+	    SSHKEY_PRIVATE_PKCS8, NULL, 0), 0);
+	ASSERT_INT_EQ(sshkey_parse_private_fileblob_type(pem, KEY_ED301,
+	    "", &parsed, NULL), SSH_ERR_INVALID_FORMAT);
+	ASSERT_PTR_EQ(parsed, NULL);
+	sshkey_free(other);
+	sshkey_free(key);
+	sshbuf_free(pem);
+	sshbuf_free(file);
+	TEST_DONE();
+}
+#endif /* WITH_OPENSSL */
+
 static void
 ed301_negative_tests(void)
 {
@@ -870,6 +946,9 @@ sshkey_tests(void)
 
 #ifdef WITH_ED301
 	ed301_negative_tests();
+#ifdef WITH_OPENSSL
+	ed301_pkcs8_tests();
+#endif
 #endif
 
 #ifdef WITH_OPENSSL

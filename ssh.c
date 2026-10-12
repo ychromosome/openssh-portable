@@ -613,6 +613,28 @@ set_addrinfo_port(struct addrinfo *addrs, int port)
 	}
 }
 
+/* PROTOCOL.ed301 6.2: -Q lists only algorithms usable at run time. */
+static char *
+query_filter_available(char *list)
+{
+	char *a, *b;
+	size_t i;
+
+	for (i = 0; list[i] != '\0'; i++)
+		if (list[i] == '\n')
+			list[i] = ',';
+	a = kex_alg_filter(list);
+	b = a == NULL ? NULL : sshkey_alg_filter(a);
+	if (b == NULL)
+		fatal_f("filter failed");
+	free(a);
+	free(list);
+	for (i = 0; b[i] != '\0'; i++)
+		if (b[i] == ',')
+			b[i] = '\n';
+	return b;
+}
+
 /*
  * Main program for the ssh client.
  */
@@ -825,6 +847,7 @@ main(int ac, char **av)
 			}
 			if (cp == NULL)
 				fatal("Unsupported query \"%s\"", optarg);
+			cp = query_filter_available(cp);
 			printf("%s\n", cp);
 			free(cp);
 			exit(0);

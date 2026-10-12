@@ -263,7 +263,6 @@ const char	*sshkey_ssh_name(const struct sshkey *);
 const char	*sshkey_ssh_name_plain(const struct sshkey *);
 int		 sshkey_names_valid2(const char *, int, int);
 char		*sshkey_alg_list(int, int, int, char);
-char		*sshkey_alg_list_all(int, int, int, char);
 char	*sshkey_alg_filter(const char *);
 
 int	 sshkey_from_blob(const u_char *, size_t, struct sshkey **);

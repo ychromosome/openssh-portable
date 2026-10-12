@@ -211,9 +211,9 @@ assemble_algorithms(ServerOptions *o)
 
 	all_cipher = cipher_alg_list(',', 0);
 	all_mac = mac_alg_list(',');
-	all_kex = kex_alg_list_all(',');
-	all_key = sshkey_alg_list_all(0, 0, 1, ',');
-	all_sig = sshkey_alg_list_all(0, 1, 1, ',');
+	all_kex = kex_alg_list(',');
+	all_key = sshkey_alg_list(0, 0, 1, ',');
+	all_sig = sshkey_alg_list(0, 1, 1, ',');
 	/* remove unsupported algos from default lists */
 	def_cipher = match_filter_allowlist(KEX_SERVER_ENCRYPT, all_cipher);
 	def_mac = match_filter_allowlist(KEX_SERVER_MAC, all_mac);
@@ -227,62 +227,11 @@ assemble_algorithms(ServerOptions *o)
 	} while (0)
 	ASSEMBLE(ciphers, def_cipher, all_cipher);
 	ASSEMBLE(macs, def_mac, all_mac);
-	/* Preserve an explicit list emptied by runtime filtering on reassembly. */
-	if (o->kex_algorithms == NULL ||
-	    *o->kex_algorithms != '\0')
-		ASSEMBLE(kex_algorithms, def_kex, all_kex);
-	{
-		char *filtered = kex_alg_filter(o->kex_algorithms);
-
-		if (filtered == NULL)
-			fatal_f("kex_alg_filter");
-		free(o->kex_algorithms);
-		o->kex_algorithms = filtered;
-	}
-	if (o->hostkeyalgorithms == NULL ||
-	    *o->hostkeyalgorithms != '\0')
-		ASSEMBLE(hostkeyalgorithms, def_key, all_key);
-	{
-		char *filtered = sshkey_alg_filter(o->hostkeyalgorithms);
-
-		if (filtered == NULL)
-			fatal_f("sshkey_alg_filter");
-		free(o->hostkeyalgorithms);
-		o->hostkeyalgorithms = filtered;
-	}
-	if (o->hostbased_accepted_algos == NULL ||
-	    *o->hostbased_accepted_algos != '\0')
-		ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
-	{
-		char *filtered = sshkey_alg_filter(o->hostbased_accepted_algos);
-
-		if (filtered == NULL)
-			fatal_f("sshkey_alg_filter");
-		free(o->hostbased_accepted_algos);
-		o->hostbased_accepted_algos = filtered;
-	}
-	if (o->pubkey_accepted_algos == NULL ||
-	    *o->pubkey_accepted_algos != '\0')
-		ASSEMBLE(pubkey_accepted_algos, def_key, all_key);
-	{
-		char *filtered = sshkey_alg_filter(o->pubkey_accepted_algos);
-
-		if (filtered == NULL)
-			fatal_f("sshkey_alg_filter");
-		free(o->pubkey_accepted_algos);
-		o->pubkey_accepted_algos = filtered;
-	}
-	if (o->ca_sign_algorithms == NULL ||
-	    *o->ca_sign_algorithms != '\0')
-		ASSEMBLE(ca_sign_algorithms, def_sig, all_sig);
-	{
-		char *filtered = sshkey_alg_filter(o->ca_sign_algorithms);
-
-		if (filtered == NULL)
-			fatal_f("sshkey_alg_filter");
-		free(o->ca_sign_algorithms);
-		o->ca_sign_algorithms = filtered;
-	}
+	ASSEMBLE(kex_algorithms, def_kex, all_kex);
+	ASSEMBLE(hostkeyalgorithms, def_key, all_key);
+	ASSEMBLE(hostbased_accepted_algos, def_key, all_key);
+	ASSEMBLE(pubkey_accepted_algos, def_key, all_key);
+	ASSEMBLE(ca_sign_algorithms, def_sig, all_sig);
 #undef ASSEMBLE
 	free(all_cipher);
 	free(all_mac);

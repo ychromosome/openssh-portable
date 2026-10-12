@@ -339,31 +339,18 @@ sshkey_match_keyname_to_sigalgs(const char *keyname, const char *sigalgs)
 		return match_pattern_list(keyname, sigalgs, 0) == 1;
 }
 
-static char *
-sshkey_alg_list_impl(int certs_only, int plain_only, int include_sigonly,
-    char sep, int available_only)
+char *
+sshkey_alg_list(int certs_only, int plain_only, int include_sigonly, char sep)
 {
 	char *ret = NULL;
 	size_t i;
 	const struct sshkey_impl *impl;
 	char sep_str[2] = {sep, '\0'};
 
-#ifndef WITH_ED301
-	(void)available_only;
-#endif
-
 	for (i = 0; keyimpls[i] != NULL; i++) {
 		impl = keyimpls[i];
 		if (impl->name == NULL)
 			continue;
-#ifdef WITH_ED301
-		if (available_only &&
-		    (impl->type == KEY_ED301 || impl->type == KEY_ED301_CERT ||
-		    impl->type == KEY_MLDSA65_ED301 ||
-		    impl->type == KEY_MLDSA65_ED301_CERT) &&
-		    !ssh_ed301_available())
-			continue;
-#endif
 		if (!include_sigonly && impl->sigonly)
 			continue;
 		if ((certs_only && !impl->cert) || (plain_only && impl->cert))
@@ -373,21 +360,7 @@ sshkey_alg_list_impl(int certs_only, int plain_only, int include_sigonly,
 	return ret;
 }
 
-char *
-sshkey_alg_list(int certs_only, int plain_only, int include_sigonly, char sep)
-{
-	return sshkey_alg_list_impl(certs_only, plain_only, include_sigonly,
-	    sep, 1);
-}
-
-char *
-sshkey_alg_list_all(int certs_only, int plain_only, int include_sigonly,
-    char sep)
-{
-	return sshkey_alg_list_impl(certs_only, plain_only, include_sigonly,
-	    sep, 0);
-}
-
+/* PROTOCOL.ed301 6.2: drop algorithms whose provider is unavailable. */
 char *
 sshkey_alg_filter(const char *names)
 {

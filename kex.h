@@ -209,7 +209,6 @@ int	 kex_nid_from_name(const char *);
 int	 kex_is_pq_from_name(const char *);
 int	 kex_names_valid(const char *);
 char	*kex_alg_list(char);
-char	*kex_alg_list_all(char);
 char	*kex_alg_filter(const char *);
 char	*kex_names_cat(const char *, const char *);
 int	 kex_has_any_alg(const char *, const char *);

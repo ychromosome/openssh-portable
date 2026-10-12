@@ -49,13 +49,16 @@ Build normally:
   ./configure
   make
 
-With missing providers, Ed301-dependent keys and X301-dependent KEX disappear
-from ssh -Q, defaults and offered lists. Their compiled configuration names
-remain valid, including explicit lists. A list containing only unavailable
-algorithms becomes empty; alternatives must be configured for a connection.
-An unavailable Ed301 or composite host file does not prevent a server with
-another usable host key from starting. ssh-keygen reports unsupported
-operations clearly, and -A skips unavailable provider host-key types.
+With missing providers, Ed301-dependent keys and X301-dependent KEX are
+removed from the offered KEX and host-key lists and from server-sig-algs,
+and ssh -Q does not list them. Configuration and default lists, as shown by
+ssh -G and sshd -T, stay static like those of any other compiled algorithm.
+Keys of these types fail to load or verify and are skipped, so another key
+or KEX is used. A connection whose lists contain only unavailable algorithms
+fails with "no matching" instead of falling back silently. An unavailable
+Ed301 or composite host file does not prevent a server with another usable
+host key from starting. ssh-keygen reports unsupported operations clearly,
+and -A skips unavailable provider host-key types.
 
 Standalone Ed301 private keys support OpenSSH containers and provider-encoded
 PKCS#8, including encryption. As with Ed25519, traditional PEM and PKCS#8

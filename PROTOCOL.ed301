@@ -279,9 +279,12 @@ keys is supported only by the EVP backend and the provider encoders.
 In the EVP backend the algorithms are available only when the provider is
 active in the default library context. Unlike Ed25519, availability is
 therefore probed at run time. If the provider is missing, the algorithms
-are removed from the default and offered algorithm lists, `ssh -Q` does not
-list them, and ssh-keygen reports a clear error. Their absence is never a
-fatal error for other algorithms.
+are removed from the offered KEX and host key algorithm lists and from
+server-sig-algs, `ssh -Q` does not list them, and ssh-keygen reports a
+clear error. Configured and default lists (`ssh -G`, `sshd -T`) stay
+static like those of any other compiled algorithm; keys of these types
+fail to load or verify and are skipped. Their absence is never a fatal
+error for other algorithms.
 
 6.3. Out of scope
 

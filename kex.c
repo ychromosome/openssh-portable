@@ -93,10 +93,7 @@ kex_proposal_populate_entries(struct ssh *ssh, char *prop[PROPOSAL_MAX],
 	const char *defpropclient[PROPOSAL_MAX] = { KEX_CLIENT };
 	const char **defprop = ssh->kex->server ? defpropserver : defpropclient;
 	u_int i;
-	char *cp;
-#ifdef WITH_ED301
-	char *filtered;
-#endif
+	char *cp, *filtered;
 
 	if (prop == NULL)
 		fatal_f("proposal missing");
@@ -112,14 +109,10 @@ kex_proposal_populate_entries(struct ssh *ssh, char *prop[PROPOSAL_MAX],
 	for (i = 0; i < PROPOSAL_MAX; i++) {
 		switch(i) {
 		case PROPOSAL_KEX_ALGS:
-			{
-				char *kexnames = kex_alg_filter(cp);
-
-				if (kexnames == NULL)
-					fatal_f("kex_alg_filter");
-				prop[i] = compat_kex_proposal(ssh, kexnames);
-				free(kexnames);
-			}
+			if ((filtered = kex_alg_filter(cp)) == NULL)
+				fatal_f("kex_alg_filter");
+			prop[i] = compat_kex_proposal(ssh, filtered);
+			free(filtered);
 			break;
 		case PROPOSAL_ENC_ALGS_CTOS:
 		case PROPOSAL_ENC_ALGS_STOC:
@@ -134,20 +127,9 @@ kex_proposal_populate_entries(struct ssh *ssh, char *prop[PROPOSAL_MAX],
 			prop[i] = xstrdup(comp ? comp : defprop[i]);
 			break;
 		case PROPOSAL_SERVER_HOST_KEY_ALGS:
-			prop[i] = xstrdup(hkalgs ? hkalgs : defprop[i]);
-#ifdef WITH_ED301
-			if (!ssh_ed301_available()) {
-				filtered = match_filter_denylist(prop[i],
-				    "ssh-ed301@eirindeval.de,"
-				    "ssh-ed301-cert-v01@eirindeval.de,"
-				    "ssh-mldsa65-ed301@eirindeval.de,"
-				    "ssh-mldsa65-ed301-cert-v01@eirindeval.de");
-				if (filtered == NULL)
-					fatal_f("match_filter_denylist");
-				free(prop[i]);
-				prop[i] = filtered;
-			}
-#endif
+			if ((prop[i] = sshkey_alg_filter(hkalgs ?
+			    hkalgs : defprop[i])) == NULL)
+				fatal_f("sshkey_alg_filter");
 			break;
 		default:
 			prop[i] = xstrdup(defprop[i]);
@@ -280,7 +262,7 @@ kex_reset_dispatch(struct ssh *ssh)
 void
 kex_set_server_sig_algs(struct ssh *ssh, const char *allowed_algs)
 {
-	char *alg, *oalgs, *algs, *sigalgs;
+	char *alg, *oalgs, *algs, *sigalgs, *cp;
 	const char *sigalg;
 
 	/*
@@ -290,8 +272,11 @@ kex_set_server_sig_algs(struct ssh *ssh, const char *allowed_algs)
 	 * We need to be careful here to match these, retain the mapping
 	 * and only add each signature algorithm once.
 	 */
-	if ((sigalgs = sshkey_alg_list(0, 1, 1, ',')) == NULL)
+	if ((cp = sshkey_alg_list(0, 1, 1, ',')) == NULL)
 		fatal_f("sshkey_alg_list failed");
+	if ((sigalgs = sshkey_alg_filter(cp)) == NULL)
+		fatal_f("sshkey_alg_filter failed");
+	free(cp);
 	oalgs = algs = xstrdup(allowed_algs);
 	free(ssh->kex->server_sig_algs);
 	ssh->kex->server_sig_algs = NULL;
@@ -350,11 +335,17 @@ kex_check_warn_weak_crypto(struct ssh *ssh)
 static int
 kex_compose_ext_info_server(struct ssh *ssh, struct sshbuf *m)
 {
+	char *cp;
 	int r;
 
-	if (ssh->kex->server_sig_algs == NULL &&
-	    (ssh->kex->server_sig_algs = sshkey_alg_list(0, 1, 1, ',')) == NULL)
-		return SSH_ERR_ALLOC_FAIL;
+	if (ssh->kex->server_sig_algs == NULL) {
+		if ((cp = sshkey_alg_list(0, 1, 1, ',')) == NULL)
+			return SSH_ERR_ALLOC_FAIL;
+		ssh->kex->server_sig_algs = sshkey_alg_filter(cp);
+		free(cp);
+		if (ssh->kex->server_sig_algs == NULL)
+			return SSH_ERR_ALLOC_FAIL;
+	}
 	if ((r = sshbuf_put_u32(m, 4)) != 0 ||
 	    (r = sshbuf_put_cstring(m, "server-sig-algs")) != 0 ||
 	    (r = sshbuf_put_cstring(m, ssh->kex->server_sig_algs)) != 0 ||

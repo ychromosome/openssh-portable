@@ -96,7 +96,7 @@ static const struct kexalg kexalgs[] = {
 };
 
 char *
-kex_alg_list_all(char sep)
+kex_alg_list(char sep)
 {
 	char *ret = NULL;
 	const struct kexalg *k;
@@ -108,7 +108,7 @@ kex_alg_list_all(char sep)
 	return ret;
 }
 
-/* Runtime filtering does not change the set of valid configuration names. */
+/* PROTOCOL.ed301 6.2: drop algorithms whose provider is unavailable. */
 char *
 kex_alg_filter(const char *names)
 {
@@ -118,25 +118,6 @@ kex_alg_filter(const char *names)
 		    KEX_MLKEM1024_X301_SHA512_NAME);
 #endif
 	return strdup(names);
-}
-
-char *
-kex_alg_list(char sep)
-{
-	char *all, *ret, *p;
-
-	/* Filters operate on comma-separated names, irrespective of output sep. */
-	if ((all = kex_alg_list_all(',')) == NULL)
-		return NULL;
-	ret = kex_alg_filter(all);
-	free(all);
-	if (ret != NULL && sep != ',') {
-		for (p = ret; *p != '\0'; p++) {
-			if (*p == ',')
-				*p = sep;
-		}
-	}
-	return ret;
 }
 
 static const struct kexalg *

@@ -649,7 +649,8 @@ ac_includes_default="\
 #endif"
 
 ac_header_c_list=
-ac_subst_vars='LTLIBOBJS
+ac_subst_vars='ED301_OBJS
+LTLIBOBJS
 COMPATINCLUDES
 CFLAGS_NOPIE
 LDFLAGS_NOPIE
@@ -778,6 +779,7 @@ ac_user_opts='
 enable_option_checking
 enable_largefile
 with_openssl
+with_ed301_rust
 with_stackprotect
 with_hardening
 with_retpoline
@@ -1487,6 +1489,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-ed301-rust=DIR   Use Ed301/X301 staticlib (only with --without-openssl)
   --without-openssl       Disable use of OpenSSL; use only limited internal crypto **EXPERIMENTAL**
   --without-stackprotect  Don't use compiler's stack protection
   --without-hardening     Don't use toolchain hardening flags
@@ -6021,6 +6024,28 @@ then :
 
 fi
 
+
+# ED301_RUST_OPTIONS_BEGIN
+ed301_rust_dir=""
+
+# Check whether --with-ed301-rust was given.
+if test ${with_ed301_rust+y}
+then :
+  withval=$with_ed301_rust; if test "x$withval" != "xno"; then ed301_rust_dir="$withval"; fi
+fi
+
+if test -n "$ed301_rust_dir" && test "x$openssl" != "xno"; then
+    as_fn_error $? "--with-ed301-rust requires --without-openssl" "$LINENO" 5
+fi
+if test "x$ed301_rust_dir" = "xyes"; then
+    as_fn_error $? "--with-ed301-rust requires a directory" "$LINENO" 5
+fi
+ED301_OBJS=""
+if test "x$openssl" = "xyes"; then
+    ED301_OBJS="ed301-openssl.o x301-openssl.o"
+fi
+
+# ED301_RUST_OPTIONS_END
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether OpenSSL will be used for cryptography" >&5
 printf %s "checking whether OpenSSL will be used for cryptography... " >&6; }
 if test "x$openssl" = "xyes" ; then
@@ -20513,6 +20538,53 @@ else
 	as_fn_error $? "OpenSSH has no source of random numbers. Please configure OpenSSL with an entropy source or re-run configure using one of the --with-prngd-port or --with-prngd-socket options" "$LINENO" 5
 fi
 LIBS="$nocrypto_saved_LIBS"
+# ED301_RUST_LINK_BEGIN
+if test -n "$ed301_rust_dir"; then
+    ED301_RUST_LIBRARY="$ed301_rust_dir/libed301_ssh_capi.a"
+    if test ! -r "$ED301_RUST_LIBRARY"; then
+        as_fn_error $? "cannot read $ED301_RUST_LIBRARY" "$LINENO" 5
+    fi
+    LIBS="$ED301_RUST_LIBRARY -lpthread -ldl -lm $LIBS"
+    { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking whether the Ed301 Rust C API links" >&5
+printf %s "checking whether the Ed301 Rust C API links... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+        #include <stddef.h>
+        extern int ed301_ssh_seed_public(unsigned char *,
+            const unsigned char *, size_t);
+
+int
+main (void)
+{
+
+        unsigned char seed[38] = {0}, public_key[38];
+        return ed301_ssh_seed_public(public_key, seed, sizeof(seed));
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf '%s\n' "yes" >&6; }
+else case e in #(
+  e) as_fn_error $? "cannot link Ed301 Rust C API" "$LINENO" 5 ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+printf '%s\n' "#define USE_ED301 1" >>confdefs.h
+
+
+printf '%s\n' "#define USE_ED301_RUST 1" >>confdefs.h
+
+    ED301_OBJS="ed301-rust.o"
+fi
+# ED301_RUST_LINK_END
+
 
 saved_LIBS="$LIBS"
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for ia_openinfo in -liaf" >&5

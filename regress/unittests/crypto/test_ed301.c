@@ -25,10 +25,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef WITH_OPENSSL
 #include <openssl/core_names.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/params.h>
+#else
+#include "ed301-rust.h"
+#endif
 
 #include "../test_helper/test_helper.h"
 #include "crypto_api.h"
@@ -51,6 +55,7 @@ verify_lengths(const u_char *sig, size_t siglen, const u_char *msg,
     size_t msglen, const u_char *context, size_t contextlen,
     const u_char *pk, size_t pklen)
 {
+#ifdef WITH_OPENSSL
 	EVP_PKEY *pkey = NULL;
 	EVP_MD_CTX *mdctx = NULL;
 	OSSL_PARAM params[2];
@@ -71,6 +76,12 @@ verify_lengths(const u_char *sig, size_t siglen, const u_char *msg,
 	EVP_MD_CTX_free(mdctx);
 	EVP_PKEY_free(pkey);
 	return ret;
+#else
+	/* Rust ABI accepts lengths explicitly and calls the same public parser.
+	 * The SSH key/signature parsers also exercise 37/39 and 75/77 bytes. */
+	return ed301_ssh_verify_context(pk, pklen, sig, siglen, msg, msglen,
+	    context, contextlen);
+#endif
 }
 
 static void
@@ -174,14 +185,16 @@ verification_vectors(struct sshbuf *json)
 	sshbuf_free(array);
 	TEST_DONE();
 	fprintf(stderr, "Ed301 verification: %zu vectors PASS "
-	    "(%zu variable-length EVP cases)\n", count, lengths);
+	    "(%zu variable-length backend cases)\n", count, lengths);
 }
 
 static void
 point_vectors(struct sshbuf *json)
 {
 	struct sshbuf *array = get_json_array(json, "point_decoding"), *v;
+#ifdef WITH_OPENSSL
 	EVP_PKEY *key;
+#endif
 	u_char *encoded, sig[76] = {0};
 	size_t len, count = 0;
 	char *id;
@@ -193,6 +206,7 @@ point_vectors(struct sshbuf *json)
 		test_subtest_info("%s", id);
 		decoded = get_json_boolean(v, "accepted");
 		encoded = get_json_hex(v, "encoded_hex", &len);
+#ifdef WITH_OPENSSL
 		key = EVP_PKEY_new_raw_public_key_ex(NULL, "Ed301-EdDSA",
 		    NULL, encoded, len);
 		/* A decoded identity/torsion point is not a permitted key. */
@@ -204,6 +218,14 @@ point_vectors(struct sshbuf *json)
 			ASSERT_INT_EQ(crypto_sign_ed301_verify_detached(sig,
 			    (const u_char *)"", 0, encoded), -1);
 		EVP_PKEY_free(key);
+#else
+		/* Mirror the EVP public-import gate through the core public API. */
+		ASSERT_INT_EQ(ed301_ssh_validate_public(encoded, len),
+		    decoded && strcmp(id, "base") == 0 ? 0 : -1);
+		if (!decoded && len == crypto_sign_ed301_PUBLICKEYBYTES)
+			ASSERT_INT_EQ(crypto_sign_ed301_verify_detached(sig,
+			    (const u_char *)"", 0, encoded), -1);
+#endif
 		free(encoded);
 		free(id);
 		sshbuf_free(v);
@@ -220,7 +242,9 @@ static void
 signing_error_vectors(struct sshbuf *json)
 {
 	struct sshbuf *array = get_json_array(json, "signing_errors"), *v;
+#ifdef WITH_OPENSSL
 	EVP_PKEY *key;
+#endif
 	u_char pk[38], sk[76], sig[76], *seed, *msg, *context;
 	size_t seedlen, msglen, contextlen, count = 0;
 	unsigned long long len;
@@ -234,10 +258,16 @@ signing_error_vectors(struct sshbuf *json)
 		msg = get_json_hex(v, "message_hex", &msglen);
 		context = get_json_hex(v, "context_hex", &contextlen);
 		if (seedlen != crypto_sign_ed301_SEEDBYTES) {
+#ifdef WITH_OPENSSL
 			key = EVP_PKEY_new_raw_private_key_ex(NULL,
 			    "Ed301-EdDSA", NULL, seed, seedlen);
 			ASSERT_PTR_EQ(key, NULL);
 			EVP_PKEY_free(key);
+#else
+			memset(pk, 0xa5, sizeof(pk));
+			ASSERT_INT_EQ(ed301_ssh_seed_public(pk, seed, seedlen), -1);
+			ASSERT_MEM_ZERO_EQ(pk, sizeof(pk));
+#endif
 		} else {
 			ASSERT_INT_EQ(crypto_sign_ed301_seed_keypair(pk,
 			    sk, seed), 0);
@@ -377,7 +407,9 @@ ed301_tests(void)
 	negative_tests();
 	ASSERT_INT_EQ(ssh_ed301_available(), 1);
 	sshbuf_free(json);
+#ifdef WITH_OPENSSL
 	ERR_clear_error();
+#endif
 }
 
 #endif /* WITH_ED301 */

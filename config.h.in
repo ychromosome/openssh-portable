@@ -1998,6 +1998,9 @@
 /* Use btmp to log bad logins */
 #undef USE_BTMP
 
+/* Use the Ed301 and X301 Rust static backend */
+#undef USE_ED301_RUST
+
 /* Enable provider-based Ed301 and X301 crypto API */
 #undef USE_ED301
 

@@ -3537,6 +3537,12 @@ sshkey_private_to_fileblob(struct sshkey *key, struct sshbuf *blob,
 	case KEY_ED25519:
 		break; /* see below */
 #else /* WITH_OPENSSL */
+#ifdef WITH_ED301
+	case KEY_ED301:
+		if (format != SSHKEY_PRIVATE_OPENSSH)
+			return SSH_ERR_FEATURE_UNSUPPORTED;
+		/* FALLTHROUGH */
+#endif
 	case KEY_ED25519:
 #endif /* WITH_OPENSSL */
 	case KEY_ED25519_SK:

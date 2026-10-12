@@ -25,10 +25,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef WITH_OPENSSL
 #include <openssl/core_names.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/params.h>
+#else
+#include "ed301-rust.h"
+#endif
 
 #include "../test_helper/test_helper.h"
 #include "crypto_api.h"
@@ -176,7 +180,9 @@ static void
 error_vectors(struct sshbuf *json)
 {
 	struct sshbuf *array = get_json_array(json, "errors"), *v;
+#ifdef WITH_OPENSSL
 	EVP_PKEY *key;
+#endif
 	u_char *secret, *u, shared[38];
 	size_t secretlen, ulen, count = 0, lengths = 0;
 	char *id;
@@ -188,16 +194,29 @@ error_vectors(struct sshbuf *json)
 		secret = get_json_hex(v, "secret_hex", &secretlen);
 		u = get_json_hex(v, "u_hex", &ulen);
 		if (secretlen != crypto_x301_SECRETBYTES) {
+#ifdef WITH_OPENSSL
 			key = EVP_PKEY_new_raw_private_key_ex(NULL, "X301",
 			    NULL, secret, secretlen);
 			ASSERT_PTR_EQ(key, NULL);
 			EVP_PKEY_free(key);
+#else
+			memset(shared, 0xa5, sizeof(shared));
+			ASSERT_INT_EQ(ed301_ssh_x_public(shared, secret, secretlen), -1);
+			ASSERT_MEM_ZERO_EQ(shared, sizeof(shared));
+#endif
 			lengths++;
 		} else if (ulen != crypto_x301_PUBLICBYTES) {
+#ifdef WITH_OPENSSL
 			key = EVP_PKEY_new_raw_public_key_ex(NULL, "X301",
 			    NULL, u, ulen);
 			ASSERT_PTR_EQ(key, NULL);
 			EVP_PKEY_free(key);
+#else
+			memset(shared, 0xa5, sizeof(shared));
+			ASSERT_INT_EQ(ed301_ssh_x_shared(shared, secret, secretlen,
+			    u, ulen), -1);
+			ASSERT_MEM_ZERO_EQ(shared, sizeof(shared));
+#endif
 			lengths++;
 		} else {
 			memset(shared, 0xa5, sizeof(shared));
@@ -216,7 +235,7 @@ error_vectors(struct sshbuf *json)
 	explicit_bzero(shared, sizeof(shared));
 	TEST_DONE();
 	fprintf(stderr, "X301 errors: %zu vectors PASS "
-	    "(%zu variable-length EVP cases)\n", count, lengths);
+	    "(%zu variable-length backend cases)\n", count, lengths);
 }
 
 static void
@@ -377,7 +396,9 @@ x301_tests(void)
 		explicit_bzero(keys[i].secret, sizeof(keys[i].secret));
 	}
 	sshbuf_free(json);
+#ifdef WITH_OPENSSL
 	ERR_clear_error();
+#endif
 }
 
 #endif /* WITH_ED301 */

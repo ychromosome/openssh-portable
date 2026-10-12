@@ -134,6 +134,24 @@ AC_ARG_WITH([openssl],
 	   fi
 	]
 )
+# ED301_RUST_OPTIONS_BEGIN
+ed301_rust_dir=""
+AC_ARG_WITH([ed301-rust],
+    [  --with-ed301-rust=DIR   Use Ed301/X301 staticlib (only with --without-openssl)],
+    [if test "x$withval" != "xno"; then ed301_rust_dir="$withval"; fi])
+if test -n "$ed301_rust_dir" && test "x$openssl" != "xno"; then
+    AC_MSG_ERROR([--with-ed301-rust requires --without-openssl])
+fi
+if test "x$ed301_rust_dir" = "xyes"; then
+    AC_MSG_ERROR([--with-ed301-rust requires a directory])
+fi
+ED301_OBJS=""
+if test "x$openssl" = "xyes"; then
+    ED301_OBJS="ed301-openssl.o x301-openssl.o"
+fi
+AC_SUBST([ED301_OBJS])
+# ED301_RUST_OPTIONS_END
+
 AC_MSG_CHECKING([whether OpenSSL will be used for cryptography])
 if test "x$openssl" = "xyes" ; then
 	AC_MSG_RESULT([yes])
@@ -3629,6 +3647,30 @@ else
 	AC_MSG_ERROR([OpenSSH has no source of random numbers. Please configure OpenSSL with an entropy source or re-run configure using one of the --with-prngd-port or --with-prngd-socket options])
 fi
 LIBS="$nocrypto_saved_LIBS"
+
+# ED301_RUST_LINK_BEGIN
+if test -n "$ed301_rust_dir"; then
+    ED301_RUST_LIBRARY="$ed301_rust_dir/libed301_ssh_capi.a"
+    if test ! -r "$ED301_RUST_LIBRARY"; then
+        AC_MSG_ERROR([cannot read $ED301_RUST_LIBRARY])
+    fi
+    LIBS="$ED301_RUST_LIBRARY -lpthread -ldl -lm $LIBS"
+    AC_MSG_CHECKING([whether the Ed301 Rust C API links])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+        #include <stddef.h>
+        extern int ed301_ssh_seed_public(unsigned char *,
+            const unsigned char *, size_t);
+    ]], [[
+        unsigned char seed[38] = {0}, public_key[38];
+        return ed301_ssh_seed_public(public_key, seed, sizeof(seed));
+    ]])], [AC_MSG_RESULT([yes])],
+        [AC_MSG_ERROR([cannot link Ed301 Rust C API])])
+    AC_DEFINE([USE_ED301], [1], [Enable provider-based Ed301 and X301 crypto API])
+    AC_DEFINE([USE_ED301_RUST], [1], [Use the Ed301 and X301 Rust static backend])
+    ED301_OBJS="ed301-rust.o"
+fi
+# ED301_RUST_LINK_END
+
 
 saved_LIBS="$LIBS"
 AC_CHECK_LIB([iaf], [ia_openinfo], [

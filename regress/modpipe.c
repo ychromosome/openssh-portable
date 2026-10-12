@@ -25,7 +25,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <limits.h>
 #ifdef HAVE_ERR_H
 # include <err.h>
 #endif
@@ -34,8 +33,7 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: modpipe [-k] [-w] [-m modspec ...] < in > out\n");
-	fprintf(stderr, "-k: offsets start after the first SSH_MSG_NEWKEYS\n");
+	fprintf(stderr, "Usage: modpipe -w [-m modspec ...] < in > out\n");
 	fprintf(stderr, "modspec is one of:\n");
 	fprintf(stderr, "    xor:offset:value       - XOR \"value\" at \"offset\"\n");
 	fprintf(stderr, "    andor:offset:val1:val2 - AND \"val1\" then OR \"val2\" at \"offset\"\n");
@@ -80,69 +78,18 @@ parse_modification(const char *s, struct modification *m)
 		errx(1, "Invalid modification type \"%s\"", what);
 }
 
-/* Locate the start of encryption without assuming a KEX or host-key size. */
-struct cleartext_kex {
-	int banner, newkeys;
-	u_char prefix[4], padding;
-	size_t line_len, position;
-	uint32_t packet_len;
-};
-
-static int
-past_newkeys(struct cleartext_kex *kex, u_char byte)
-{
-	if (!kex->banner) {
-		if (kex->line_len < sizeof(kex->prefix))
-			kex->prefix[kex->line_len] = byte;
-		if (++kex->line_len > 8192)
-			errx(1, "SSH identification line too long");
-		if (byte == '\n') {
-			if (kex->line_len >= sizeof(kex->prefix) &&
-			    memcmp(kex->prefix, "SSH-", 4) == 0)
-				kex->banner = 1;
-			kex->line_len = 0;
-		}
-		return 0;
-	}
-	if (kex->position < 4) {
-		kex->packet_len = (kex->packet_len << 8) | byte;
-		if (kex->position == 3 && (kex->packet_len < 6 ||
-		    kex->packet_len > 1024 * 1024))
-			errx(1, "Invalid cleartext SSH packet length");
-	} else if (kex->position == 4) {
-		kex->padding = byte;
-		if (byte < 4 || (uint32_t)byte + 2 > kex->packet_len)
-			errx(1, "Invalid cleartext SSH packet padding");
-	} else if (kex->position == 5) {
-		kex->newkeys = byte == 21; /* SSH_MSG_NEWKEYS */
-		if (kex->newkeys && kex->packet_len != kex->padding + 2U)
-			errx(1, "Invalid SSH_MSG_NEWKEYS payload length");
-	}
-	if (++kex->position == (size_t)kex->packet_len + 4) {
-		if (kex->newkeys)
-			return 1;
-		kex->packet_len = 0;
-		kex->position = 0;
-	}
-	return 0;
-}
-
 int
 main(int argc, char **argv)
 {
 	int ch;
 	u_char buf[8192];
-	size_t total, j;
-	struct cleartext_kex kex = {0};
+	size_t total;
 	ssize_t r, s, o;
 	struct modification mods[MAX_MODIFICATIONS];
-	u_int i, wflag = 0, kflag = 0, offset_set = 0, num_mods = 0;
+	u_int i, wflag = 0, num_mods = 0;
 
-	while ((ch = getopt(argc, argv, "kwm:")) != -1) {
+	while ((ch = getopt(argc, argv, "wm:")) != -1) {
 		switch (ch) {
-		case 'k':
-			kflag = 1;
-			break;
 		case 'm':
 			if (num_mods >= MAX_MODIFICATIONS)
 				errx(1, "Too many modifications");
@@ -165,24 +112,7 @@ main(int argc, char **argv)
 				continue;
 			err(1, "read");
 		}
-		if (kflag && !offset_set) {
-			for (j = 0; j < (size_t)s; j++) {
-				if (!past_newkeys(&kex, buf[j]))
-					continue;
-				for (i = 0; i < num_mods; i++) {
-					if (mods[i].offset > ULLONG_MAX - total - j - 1)
-						errx(1, "Modification offset overflow");
-					mods[i].offset += total + j + 1;
-				}
-				offset_set = 1;
-				fprintf(stderr, "modpipe: first encrypted byte %zu\n",
-				    total + j + 1);
-				break;
-			}
-		}
 		for (i = 0; i < num_mods; i++) {
-			if (kflag && !offset_set)
-				continue;
 			if (mods[i].offset < total ||
 			    mods[i].offset >= total + s)
 				continue;
@@ -208,8 +138,6 @@ main(int argc, char **argv)
 		}
 		total += s;
 	}
-	if (kflag && !offset_set)
-		errx(1, "SSH_MSG_NEWKEYS not reached");
 	/* Warn if modifications not reached in input stream */
 	r = 0;
 	for (i = 0; wflag && i < num_mods; i++) {

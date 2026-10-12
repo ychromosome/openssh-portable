@@ -258,15 +258,21 @@ like ML-KEM-768 for mlkem768x25519-sha256. It is not taken from libcrypto.
 
 6.1. Backends
 
-As for Ed25519, the cryptographic primitives sit behind crypto_api.h and
-one of two backends is selected at build time:
+The cryptographic primitives sit behind crypto_api.h and the backend is
+selected at build time:
 
-  WITH_OPENSSL     ed301-openssl.c: EVP with algorithm "Ed301-EdDSA" and
-                   "X301" from the openssl-provider-ed301 provider,
+  WITH_OPENSSL     ed301-openssl.c and x301-openssl.c use EVP algorithms
+                   "Ed301-EdDSA" and "X301" in the default library context,
                    activated by the openssl-provider-ed301-policy package.
-  !WITH_OPENSSL    Rust core of [ED301]/[X301] via a small C-ABI crate.
+  !WITH_OPENSSL    --with-ed301-rust=DIR selects ed301-rust.c and the small
+                   ed301-ssh-capi static library over the public Rust core
+                   APIs of [ED301]/[X301]. Without this option Ed301/X301
+                   are not compiled into a build without OpenSSL.
 
-ML-DSA-65 and ML-KEM-1024 always come from embedded libcrux.
+ML-DSA-65 and ML-KEM-1024 always come from embedded libcrux. The latter
+has its own portable extraction translation unit, separate from the
+existing ML-KEM-768/ML-DSA extraction. PKCS#8 for standalone Ed301 private
+keys is supported only by the EVP backend and the provider encoders.
 
 6.2. Runtime availability
 

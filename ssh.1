@@ -304,8 +304,10 @@ The default is
 .Pa ~/.ssh/id_rsa ,
 .Pa ~/.ssh/id_ecdsa ,
 .Pa ~/.ssh/id_ecdsa_sk ,
+.Pa ~/.ssh/id_ed301 ,
 .Pa ~/.ssh/id_ed25519 ,
-.Pa ~/.ssh/id_ed25519_sk
+.Pa ~/.ssh/id_ed25519_sk ,
+.Pa ~/.ssh/id_mldsa65_ed301 ,
 and
 .Pa ~/.ssh/id_mldsa44_ed25519 .
 Identity files may also be specified on
@@ -854,7 +856,8 @@ key pair for authentication purposes.
 The server knows the public key, and only the user knows the private key.
 .Nm
 implements public key authentication protocol automatically,
-using one of the ECDSA, Ed25519 or RSA algorithms.
+using one of the ECDSA, Ed301, Ed25519, MLDSA65-ED301,
+MLDSA44-ED25519 or RSA algorithms.
 .Pp
 The file
 .Pa ~/.ssh/authorized_keys
@@ -892,10 +895,14 @@ file name suffix:
 ECDSA
 .It Pa ~/.ssh/id_ecdsa_sk
 authenticator-hosted ECDSA
+.It Pa ~/.ssh/id_ed301
+Ed301
 .It Pa ~/.ssh/id_ed25519
 Ed25519
 .It Pa ~/.ssh/id_ed25519_sk
 authenticator-hosted Ed25519
+.It Pa ~/.ssh/id_mldsa65_ed301
+MLDSA65-ED301
 .It Pa ~/.ssh/id_mldsa44_ed25519
 MLDSA44-ED25519
 .It Pa ~/.ssh/id_rsa
@@ -1188,6 +1195,8 @@ has been disabled).
 Fingerprints can be determined using
 .Xr ssh-keygen 1 :
 .Pp
+.Dl $ ssh-keygen -l -f /etc/ssh/ssh_host_ed301_key
+.Pp
 .Dl $ ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key
 .Pp
 If the fingerprint is already known, it can be matched
@@ -1473,7 +1482,8 @@ secret, but the recommended permissions are read/write/execute for the user,
 and not accessible by others.
 .Pp
 .It Pa ~/.ssh/authorized_keys
-Lists the public keys (ECDSA, Ed25519, RSA)
+Lists the public keys (ECDSA, Ed301, Ed25519,
+MLDSA65-ED301, MLDSA44-ED25519, RSA)
 that can be used for logging in as this user.
 The format of this file is described in the
 .Xr sshd 8
@@ -1495,8 +1505,10 @@ above.
 .Pp
 .It Pa ~/.ssh/id_ecdsa
 .It Pa ~/.ssh/id_ecdsa_sk
+.It Pa ~/.ssh/id_ed301
 .It Pa ~/.ssh/id_ed25519
 .It Pa ~/.ssh/id_ed25519_sk
+.It Pa ~/.ssh/id_mldsa65_ed301
 .It Pa ~/.ssh/id_mldsa44_ed25519
 .It Pa ~/.ssh/id_rsa
 Contains the private key for authentication.
@@ -1511,8 +1523,10 @@ sensitive part of this file using AES-128.
 .Pp
 .It Pa ~/.ssh/id_ecdsa.pub
 .It Pa ~/.ssh/id_ecdsa_sk.pub
+.It Pa ~/.ssh/id_ed301.pub
 .It Pa ~/.ssh/id_ed25519.pub
 .It Pa ~/.ssh/id_ed25519_sk.pub
+.It Pa ~/.ssh/id_mldsa65_ed301.pub
 .It Pa ~/.ssh/id_mldsa44_ed25519.pub
 .It Pa ~/.ssh/id_rsa.pub
 Contains the public key for authentication.
@@ -1551,7 +1565,9 @@ The file format and configuration options are described in
 .Xr ssh_config 5 .
 .Pp
 .It Pa /etc/ssh/ssh_host_ecdsa_key
+.It Pa /etc/ssh/ssh_host_ed301_key
 .It Pa /etc/ssh/ssh_host_ed25519_key
+.It Pa /etc/ssh/ssh_host_mldsa65_ed301_key
 .It Pa /etc/ssh/ssh_host_mldsa44_ed25519_key
 .It Pa /etc/ssh/ssh_host_rsa_key
 These files contain the private parts of the host keys

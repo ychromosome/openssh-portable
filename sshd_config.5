@@ -413,12 +413,16 @@ Specifies which algorithms are allowed for signing of certificates
 by certificate authorities (CAs).
 The default is:
 .Bd -literal -offset indent
-ssh-ed25519,ecdsa-sha2-nistp256,
-ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
+ssh-ed301@eirindeval.de,
+ssh-ed25519,
+ecdsa-sha2-nistp256,
+ecdsa-sha2-nistp384,
+ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256,
-ssh-mldsa44-ed25519
+webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
+rsa-sha2-512,
+rsa-sha2-256
 .Ed
 .Pp
 If the specified list begins with a
@@ -821,6 +825,7 @@ character, then the specified signature algorithms will be placed at
 the head of the default set.
 The default for this option is:
 .Bd -literal -offset 3n
+ssh-ed301-cert-v01@eirindeval.de,
 ssh-ed25519-cert-v01@openssh.com,
 ecdsa-sha2-nistp256-cert-v01@openssh.com,
 ecdsa-sha2-nistp384-cert-v01@openssh.com,
@@ -830,14 +835,20 @@ sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+ssh-mldsa65-ed301-cert-v01@eirindeval.de,
 ssh-mldsa44-ed25519-cert,
+ssh-ed301@eirindeval.de,
 ssh-ed25519,
-ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
+ecdsa-sha2-nistp256,
+ecdsa-sha2-nistp384,
+ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256,
-ssh-mldsa44-ed2551
+rsa-sha2-512,
+rsa-sha2-256,
+ssh-mldsa65-ed301@eirindeval.de,
+ssh-mldsa44-ed25519
 .Ed
 .Pp
 The list of available signature algorithms may also be obtained using
@@ -879,7 +890,9 @@ Specifies a file containing a private host key
 used by SSH.
 The defaults are
 .Pa /etc/ssh/ssh_host_ecdsa_key ,
+.Pa /etc/ssh/ssh_host_ed301_key ,
 .Pa /etc/ssh/ssh_host_ed25519_key ,
+.Pa /etc/ssh/ssh_host_mldsa65_ed301_key ,
 .Pa /etc/ssh/ssh_host_mldsa44_ed25519_key ,
 and
 .Pa /etc/ssh/ssh_host_rsa_key .
@@ -910,6 +923,7 @@ Specifies the host key signature algorithms
 that the server offers.
 The default for this option is:
 .Bd -literal -offset 3n
+ssh-ed301-cert-v01@eirindeval.de,
 ssh-ed25519-cert-v01@openssh.com,
 ecdsa-sha2-nistp256-cert-v01@openssh.com,
 ecdsa-sha2-nistp384-cert-v01@openssh.com,
@@ -919,13 +933,19 @@ sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+ssh-mldsa65-ed301-cert-v01@eirindeval.de,
 ssh-mldsa44-ed25519-cert,
+ssh-ed301@eirindeval.de,
 ssh-ed25519,
-ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
+ecdsa-sha2-nistp256,
+ecdsa-sha2-nistp384,
+ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256,
+rsa-sha2-512,
+rsa-sha2-256,
+ssh-mldsa65-ed301@eirindeval.de,
 ssh-mldsa44-ed25519
 .Ed
 .Pp
@@ -1062,6 +1082,11 @@ file on logout.
 The default is
 .Cm yes .
 .It Cm KexAlgorithms
+The private-use Ed301 and X301 algorithms require the Ed301 build backend.
+In an OpenSSL build they additionally require active providers.
+Unavailable algorithms are removed from the default and offered lists;
+their configuration names remain valid.
+.Pp
 Specifies the permitted KEX (Key Exchange) algorithms that the server will
 offer to clients.
 The ordering of this list is not important, as the client specifies the
@@ -1084,6 +1109,8 @@ default set.
 The supported algorithms are:
 .Pp
 .Bl -item -compact -offset indent
+.It
+x301-sha512@eirindeval.de
 .It
 curve25519-sha256
 .It
@@ -1111,6 +1138,8 @@ ecdh-sha2-nistp521
 .It
 mlkem768nistp256-sha256
 .It
+mlkem1024x301-sha512@eirindeval.de
+.It
 mlkem768x25519-sha256
 .It
 sntrup761x25519-sha512
@@ -1120,10 +1149,16 @@ sntrup761x25519-sha512@openssh.com
 .Pp
 The default is:
 .Bd -literal -offset indent
+mlkem1024x301-sha512@eirindeval.de,
 mlkem768x25519-sha256,
-sntrup761x25519-sha512,sntrup761x25519-sha512@openssh.com,
-curve25519-sha256,curve25519-sha256@libssh.org,
-ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521
+sntrup761x25519-sha512,
+sntrup761x25519-sha512@openssh.com,
+x301-sha512@eirindeval.de,
+curve25519-sha256,
+curve25519-sha256@libssh.org,
+ecdh-sha2-nistp256,
+ecdh-sha2-nistp384,
+ecdh-sha2-nistp521
 .Ed
 .Pp
 The list of supported key exchange algorithms may also be obtained using
@@ -1782,6 +1817,7 @@ character, then the specified algorithms will be placed at the head of the
 default set.
 The default for this option is:
 .Bd -literal -offset 3n
+ssh-ed301-cert-v01@eirindeval.de,
 ssh-ed25519-cert-v01@openssh.com,
 ecdsa-sha2-nistp256-cert-v01@openssh.com,
 ecdsa-sha2-nistp384-cert-v01@openssh.com,
@@ -1791,13 +1827,19 @@ sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+ssh-mldsa65-ed301-cert-v01@eirindeval.de,
 ssh-mldsa44-ed25519-cert,
+ssh-ed301@eirindeval.de,
 ssh-ed25519,
-ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
+ecdsa-sha2-nistp256,
+ecdsa-sha2-nistp384,
+ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256,
+rsa-sha2-512,
+rsa-sha2-256,
+ssh-mldsa65-ed301@eirindeval.de,
 ssh-mldsa44-ed25519
 .Ed
 .Pp

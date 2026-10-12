@@ -69,8 +69,10 @@ When run without arguments, it adds the files
 .Pa ~/.ssh/id_rsa ,
 .Pa ~/.ssh/id_ecdsa ,
 .Pa ~/.ssh/id_ecdsa_sk ,
+.Pa ~/.ssh/id_ed301 ,
 .Pa ~/.ssh/id_ed25519 ,
-.Pa ~/.ssh/id_ed25519_sk
+.Pa ~/.ssh/id_ed25519_sk ,
+.Pa ~/.ssh/id_mldsa65_ed301 ,
 and
 .Pa ~/.ssh/id_mldsa44_ed25519 .
 After loading a private key,
@@ -333,12 +335,14 @@ the built-in USB HID support.
 .Bl -tag -width Ds -compact
 .It Pa ~/.ssh/id_ecdsa
 .It Pa ~/.ssh/id_ecdsa_sk
+.It Pa ~/.ssh/id_ed301
 .It Pa ~/.ssh/id_ed25519
 .It Pa ~/.ssh/id_ed25519_sk
+.It Pa ~/.ssh/id_mldsa65_ed301
 .It Pa ~/.ssh/id_mldsa44_ed25519
 .It Pa ~/.ssh/id_rsa
-Contains the ECDSA, authenticator-hosted ECDSA, Ed25519,
-authenticator-hosted Ed25519, MLDSA44-ED25519
+Contains the ECDSA, authenticator-hosted ECDSA, Ed301, Ed25519,
+authenticator-hosted Ed25519, MLDSA65-ED301, MLDSA44-ED25519
 or RSA authentication identity of the user.
 .El
 .Pp

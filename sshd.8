@@ -181,7 +181,9 @@ is not run as root (as the normal
 host key files are normally not readable by anyone but root).
 The default is
 .Pa /etc/ssh/ssh_host_ecdsa_key ,
+.Pa /etc/ssh/ssh_host_ed301_key ,
 .Pa /etc/ssh/ssh_host_ed25519_key ,
+.Pa /etc/ssh/ssh_host_mldsa65_ed301_key ,
 .Pa /etc/ssh/ssh_host_mldsa44_ed25519_key
 and
 .Pa /etc/ssh/ssh_host_rsa_key .
@@ -468,7 +470,11 @@ ecdsa-sha2-nistp521
 .It
 sk-ssh-ed25519@openssh.com
 .It
+ssh-ed301@eirindeval.de
+.It
 ssh-ed25519
+.It
+ssh-mldsa65-ed301@eirindeval.de
 .It
 ssh-mldsa44-ed25519
 .It
@@ -484,8 +490,10 @@ Note that lines in this file can be several hundred bytes long
 You don't want to type them in; instead, copy the
 .Pa id_ecdsa.pub ,
 .Pa id_ecdsa_sk.pub ,
+.Pa id_ed301.pub ,
 .Pa id_ed25519.pub ,
 .Pa id_ed25519_sk.pub ,
+.Pa id_mldsa65_ed301.pub ,
 .Pa id_mldsa44_ed25519.pub ,
 or the
 .Pa id_rsa.pub
@@ -886,7 +894,8 @@ secret, but the recommended permissions are read/write/execute for the user,
 and not accessible by others.
 .Pp
 .It Pa ~/.ssh/authorized_keys
-Lists the public keys (ECDSA, Ed25519, RSA)
+Lists the public keys (ECDSA, Ed301, Ed25519,
+MLDSA65-ED301, MLDSA44-ED25519, RSA)
 that can be used for logging in as this user.
 The format of this file is described above.
 The content of the file is not highly sensitive, but the recommended
@@ -962,7 +971,9 @@ but allows host-based authentication without permitting login with
 rlogin/rsh.
 .Pp
 .It Pa /etc/ssh/ssh_host_ecdsa_key
+.It Pa /etc/ssh/ssh_host_ed301_key
 .It Pa /etc/ssh/ssh_host_ed25519_key
+.It Pa /etc/ssh/ssh_host_mldsa65_ed301_key
 .It Pa /etc/ssh/ssh_host_mldsa44_ed25519_key
 .It Pa /etc/ssh/ssh_host_rsa_key
 These files contain the private parts of the host keys.
@@ -973,7 +984,9 @@ Note that
 does not start if these files are group/world-accessible.
 .Pp
 .It Pa /etc/ssh/ssh_host_ecdsa_key.pub
+.It Pa /etc/ssh/ssh_host_ed301_key.pub
 .It Pa /etc/ssh/ssh_host_ed25519_key.pub
+.It Pa /etc/ssh/ssh_host_mldsa65_ed301_key.pub
 .It Pa /etc/ssh/ssh_host_mldsa44_ed25519_key.pub
 .It Pa /etc/ssh/ssh_host_rsa_key.pub
 These files contain the public parts of the host keys.

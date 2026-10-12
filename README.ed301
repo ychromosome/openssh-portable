@@ -1,0 +1,165 @@
+Experimental Ed301 and X301 SSH profile
+=====================================
+
+This tree implements the private-use profile in PROTOCOL.ed301. It is
+experimental, has no IANA registration, and requires a peer implementing
+this same profile. The normative wire and cryptographic rules are in
+sections 1-5 of that document.
+
+Algorithms
+----------
+
+  ssh-ed301@eirindeval.de
+  ssh-ed301-cert-v01@eirindeval.de
+  x301-sha512@eirindeval.de
+  mlkem1024x301-sha512@eirindeval.de
+  ssh-mldsa65-ed301@eirindeval.de
+  ssh-mldsa65-ed301-cert-v01@eirindeval.de
+
+Friendly key-generation names are ed301 and mldsa65-ed301. The corresponding
+user identity files are ~/.ssh/id_ed301 and ~/.ssh/id_mldsa65_ed301; default
+host files are ssh_host_ed301_key and ssh_host_mldsa65_ed301_key under the
+configured SSH directory. Default key generation without -t remains Ed25519.
+Ed301 displays 304 key bits; the composite displays 560, its 70-byte seed
+storage size. These are size conventions, not measured security claims.
+
+The composite requires both ML-DSA-65 and Ed301 signatures. Both components
+use the fixed profile label as their native context; an Ed301 component
+cannot verify as a standalone SSH Ed301 signature with empty context.
+The hybrid always combines both ML-KEM-1024 and raw X301 secrets with SHA-512.
+It does not advertise ML-KEM-1024 alone as a separate SSH key exchange.
+
+Provider build (backend B)
+--------------------------
+
+The ordinary OpenSSL build uses ed301-openssl.c and x301-openssl.c. It needs
+the OpenSSL provider APIs and the context-string signature parameter.
+The tested environment uses OpenSSL 4.0.3 and these Fedora packages:
+
+  openssl-provider-ed301
+  openssl-provider-ed301-policy
+
+The policy package activates Ed301-EdDSA and X301 providers in the default
+OpenSSL library context. OpenSSH does not load them explicitly or override
+properties. Other applications still need their own support and algorithm
+selection; provider activation alone does not select this SSH profile.
+
+Build normally:
+
+  ./configure
+  make
+
+With missing providers, Ed301-dependent keys and X301-dependent KEX disappear
+from ssh -Q, defaults and offered lists. Their compiled configuration names
+remain valid, including explicit lists. A list containing only unavailable
+algorithms becomes empty; alternatives must be configured for a connection.
+An unavailable Ed301 or composite host file does not prevent a server with
+another usable host key from starting. ssh-keygen reports unsupported
+operations clearly, and -A skips unavailable provider host-key types.
+
+Standalone Ed301 private keys support OpenSSH containers and provider-encoded
+PKCS#8, including encryption. As with Ed25519, traditional PEM and PKCS#8
+public-key conversion through ssh-keygen -e/-i are not supported. Composite
+private keys use the OpenSSH container.
+
+Rust build without OpenSSL (backend A)
+-------------------------------------
+
+The companion Ed301 repository must contain the rust/ssh-capi adapter. It
+is currently on the local ssh-capi integration branch, commit
+3acd175, based on Testing 9ef3fc21. No core arithmetic or parameters are
+changed. The adapter calls public Ed301-EdDSA/X301 APIs only. Its minimum
+Rust version is 1.91; the integration tests here used Rust 1.99.0.
+
+From the companion repository's rust/ directory, keep Cargo products outside
+the checkout and use its vendored dependencies:
+
+  CARGO_HOME=/path/to/cargo-cache \
+  CARGO_TARGET_DIR=/path/to/ed301-target \
+      cargo build --manifest-path ssh-capi/Cargo.toml --locked --offline --release
+
+Then, from a separate OpenSSH build checkout:
+
+  ./configure --without-openssl --with-ed301-rust=/path/to/ed301-target/release
+  make
+
+The directory must contain libed301_ssh_capi.a. Combining the Rust option
+with an OpenSSL build is an explicit configure error: B always uses EVP.
+Without the Rust option, a build without OpenSSL omits Ed301/X301 and retains
+the existing limited internal cryptography build. A has no libcrypto linkage.
+Its Ed301/X301 availability probes always succeed; it uses OpenSSH private
+key containers. PKCS#8 is provided by B's provider encoders, not A.
+
+Random seeds/secrets come from OpenSSH's arc4random_buf. The C ABI itself
+contains deterministic operations only. X301 resamples exactly the excluded
+weak-secret condition, never another failed public derivation. Secret owners
+and temporary results are zeroized; failures return no partial output.
+
+Embedded post-quantum primitives
+-------------------------------
+
+Both builds use embedded libcrux ML-KEM-1024 and ML-DSA-65. Neither primitive
+is obtained from libcrypto for this SSH profile. ML-DSA-65 uses the existing
+extraction. ML-KEM-1024 uses a separate portable translation unit assembled
+by mlkem1024.sh from libcrux c46481ce3cd1cc8315e90db114581d8c992c3d7d.
+libcrux_mlkem1024_sources.json records input hashes and generator identities.
+Only include flattening, formatting and internal function linkage are changed;
+the existing ML-KEM-768/ML-DSA extraction remains unchanged.
+
+Defaults
+--------
+
+With the required backends available:
+
+  * standalone Ed301 keys/certificates immediately precede Ed25519 peers;
+  * mlkem1024x301-sha512@eirindeval.de immediately precedes
+    mlkem768x25519-sha256;
+  * x301-sha512@eirindeval.de immediately precedes curve25519-sha256;
+  * composite keys/certificates immediately precede the existing
+    MLDSA44-ED25519 entries at their low-priority positions.
+
+Composite certificate authorities, like the existing upstream composite,
+require an explicit CASignatureAlgorithms setting. A composite subject
+certificate signed by an allowed standalone CA needs no such extension.
+
+Tests and acceptance scope
+--------------------------
+
+The Ed301/X301 vector suites run in both builds, including malformed lengths,
+noncanonical encodings, weak secrets, zero-result rejection and context bounds.
+Embedded tests include all 100 ML-KEM-1024 NIST KATs, all 1,040 published
+modulus failures, and all 100 ML-DSA-65 NIST KATs. Provenance is in the crypto
+testdata README files. Composite tests require both components and exercise
+stripping, private seed/public consistency and certificate/private roundtrips.
+
+The upstream RSA regression suite needs SHA-1 signatures enabled only in its
+test process on this Fedora host. The Ed301 profile's signatures, KEX hashes
+and composite message construction do not use SHA-1. For example, create a
+process-local test configuration including the system provider configuration:
+
+  openssl_conf = openssl_init
+  .include /etc/ssl/openssl.cnf
+  [openssl_init]
+  alg_section = evp_properties
+  [evp_properties]
+  rh-allow-sha1-signatures = yes
+
+Run the suite with that file, without changing system crypto policy:
+
+  OPENSSL_CONF=/path/to/openssl-sha1-test.cnf make unit
+  OPENSSL_CONF=/path/to/openssl-sha1-test.cnf make tests SUDO=
+
+The local integration additionally checks native OpenSSL ML-KEM/ML-DSA,
+independently constructed composite messages, both A/B client-server
+directions, cross-loaded keys and certificates. Every new KEX has successful
+connections with Seccomp: 2 in the actual sshd-auth connection process.
+This is local functional/integration evidence, not a product release or
+side-channel acceptance for a new compiler binary.
+
+Limits
+------
+
+There are no Ed301/composite FIDO or PKCS#11 variants: no authenticator or token
+implements these algorithms. Ed301 has no IANA SSHFP algorithm number.
+The names and protocol are private-use; interoperability with another
+implementation requires that same profile. See PROTOCOL.ed301 for details.

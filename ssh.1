@@ -307,7 +307,7 @@ The default is
 .Pa ~/.ssh/id_ed301 ,
 .Pa ~/.ssh/id_ed25519 ,
 .Pa ~/.ssh/id_ed25519_sk ,
-.Pa ~/.ssh/id_mldsa65_ed301 ,
+.Pa ~/.ssh/id_mldsa65_ed301
 and
 .Pa ~/.ssh/id_mldsa44_ed25519 .
 Identity files may also be specified on
@@ -856,8 +856,7 @@ key pair for authentication purposes.
 The server knows the public key, and only the user knows the private key.
 .Nm
 implements public key authentication protocol automatically,
-using one of the ECDSA, Ed301, Ed25519, MLDSA65-ED301,
-MLDSA44-ED25519 or RSA algorithms.
+using one of the ECDSA, Ed301, Ed25519, MLDSA65-ED301 or RSA algorithms.
 .Pp
 The file
 .Pa ~/.ssh/authorized_keys
@@ -1195,8 +1194,6 @@ has been disabled).
 Fingerprints can be determined using
 .Xr ssh-keygen 1 :
 .Pp
-.Dl $ ssh-keygen -l -f /etc/ssh/ssh_host_ed301_key
-.Pp
 .Dl $ ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key
 .Pp
 If the fingerprint is already known, it can be matched
@@ -1482,8 +1479,7 @@ secret, but the recommended permissions are read/write/execute for the user,
 and not accessible by others.
 .Pp
 .It Pa ~/.ssh/authorized_keys
-Lists the public keys (ECDSA, Ed301, Ed25519,
-MLDSA65-ED301, MLDSA44-ED25519, RSA)
+Lists the public keys (ECDSA, Ed301, Ed25519, MLDSA65-ED301, RSA)
 that can be used for logging in as this user.
 The format of this file is described in the
 .Xr sshd 8

@@ -145,7 +145,6 @@ The possible values are
 .Dq ecdsa-sk ,
 .Dq ed25519-sk ,
 .Dq mldsa65-ed301 ,
-.Dq mldsa44-ed25519 ,
 or
 .Dq rsa .
 Multiple values may be specified by separating them with commas.
@@ -181,7 +180,7 @@ Find all hosts from the file
 which have new or different keys from those in the sorted file
 .Pa ssh_known_hosts :
 .Bd -literal -offset indent
-$ ssh-keyscan -t rsa,ecdsa,ed301,ed25519,mldsa65-ed301,mldsa44-ed25519 -f ssh_hosts | \e
+$ ssh-keyscan -t rsa,ecdsa,ed25519 -f ssh_hosts | \e
 	sort -u - ssh_known_hosts | diff ssh_known_hosts -
 .Ed
 .Sh SEE ALSO

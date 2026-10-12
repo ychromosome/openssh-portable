@@ -51,11 +51,7 @@
 .Op Fl m Ar format
 .Op Fl N Ar new_passphrase
 .Op Fl O Ar option
-.Oo
-.Fl t
-.Cm ecdsa | ecdsa-sk | ed301 | ed25519 | ed25519-sk |
-.Cm mldsa65-ed301 | mldsa44-ed25519 | rsa
-.Oc
+.Op Fl t Cm ecdsa | ecdsa-sk | ed301 | ed25519 | ed25519-sk | mldsa65-ed301 | mldsa44-ed25519 | rsa
 .Op Fl w Ar provider
 .Op Fl Z Ar cipher
 .Nm ssh-keygen
@@ -277,8 +273,8 @@ should be placed to be activated.
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl A
-Generate host keys of all available default key types (rsa, ecdsa, ed301,
-ed25519, mldsa65-ed301 and mldsa44-ed25519) if they do not already exist.
+Generate host keys of all default key types (rsa, ecdsa, mldsa65-ed301,
+mldsa44-ed25519, ed301 and ed25519) if they do not already exist.
 The host keys are generated with the default key file path,
 an empty passphrase, default bits for the key type, and default comment.
 If
@@ -308,8 +304,8 @@ flag determines the key length by selecting from one of three elliptic
 curve sizes: 256, 384 or 521 bits.
 Attempting to use bit lengths other than these three values for ECDSA keys
 will fail.
-ECDSA-SK, Ed301, Ed25519, Ed25519-SK, MLDSA65-ED301 and
-MLDSA44-ED25519 keys have a fixed length and the
+ECDSA-SK, Ed301, Ed25519, Ed25519-SK and MLDSA65-ED301 keys have a fixed length
+and the
 .Fl b
 flag will be ignored.
 .It Fl C Ar comment
@@ -464,14 +460,6 @@ The supported key formats are:
 or
 .Dq PEM
 (PEM public key).
-Ed301 private keys support PKCS8 import and export only in an OpenSSL build
-with an active Ed301 provider.
-As with Ed25519, traditional PEM and PKCS8 public-key conversion via
-.Fl i
-or
-.Fl e
-are not supported for Ed301.
-MLDSA65-ED301 private keys use the OpenSSH container.
 By default OpenSSH will write newly-generated private keys in its own
 format, but when converting public keys for export the default format is
 .Dq RFC4716 .
@@ -623,11 +611,7 @@ by key ID or serial number.
 See the
 .Sx KEY REVOCATION LISTS
 section for details.
-.It Xo
-.Fl t
-.Cm ecdsa | ecdsa-sk | ed301 | ed25519 | ed25519-sk |
-.Cm mldsa65-ed301 | mldsa44-ed25519 | rsa
-.Xc
+.It Fl t Cm ecdsa | ecdsa-sk | ed301 | ed25519 | ed25519-sk | mldsa65-ed301 | mldsa44-ed25519 | rsa
 Specifies the type of key to create.
 The possible values are
 .Dq ecdsa ,
@@ -1339,9 +1323,6 @@ user1@example.com,user2@example.com ssh-rsa AAAAX1...
 *@example.com cert-authority ssh-ed25519 AAAB4...
 # A key that is accepted only for file signing.
 user2@example.com namespaces="file" ssh-ed25519 AAA41...
-# Experimental Ed301 and composite signing identities.
-user3@example.com ssh-ed301@eirindeval.de AAA...
-user4@example.com ssh-mldsa65-ed301@eirindeval.de AAA...
 .Ed
 .Sh ENVIRONMENT
 .Bl -tag -width Ds
@@ -1361,7 +1342,8 @@ the built-in USB HID support.
 .It Pa ~/.ssh/id_mldsa44_ed25519
 .It Pa ~/.ssh/id_rsa
 Contains the ECDSA, authenticator-hosted ECDSA, Ed301, Ed25519,
-authenticator-hosted Ed25519, MLDSA65-ED301, MLDSA44-ED25519 or RSA authentication identity of the user.
+authenticator-hosted Ed25519, MLDSA65-ED301
+or RSA authentication identity of the user.
 This file should not be readable by anyone but the user.
 It is possible to
 specify a passphrase when generating the key; that passphrase will be
@@ -1381,7 +1363,8 @@ will read this file when a login attempt is made.
 .It Pa ~/.ssh/id_mldsa44_ed25519.pub
 .It Pa ~/.ssh/id_rsa.pub
 Contains the ECDSA, authenticator-hosted ECDSA, Ed301, Ed25519,
-authenticator-hosted Ed25519, MLDSA65-ED301, MLDSA44-ED25519 or RSA public key for authentication.
+authenticator-hosted Ed25519, MLDSA65-ED301
+or RSA public key for authentication.
 The contents of this file should be added to
 .Pa ~/.ssh/authorized_keys
 on all machines

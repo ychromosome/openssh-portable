@@ -473,15 +473,12 @@ by certificate authorities (CAs).
 The default is:
 .Bd -literal -offset indent
 ssh-ed301@eirindeval.de,
-ssh-ed25519,
-ecdsa-sha2-nistp256,
-ecdsa-sha2-nistp384,
-ecdsa-sha2-nistp521,
+ssh-ed25519,ecdsa-sha2-nistp256,
+ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
-webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,
-rsa-sha2-256
+rsa-sha2-512,rsa-sha2-256,
+ssh-mldsa44-ed25519
 .Ed
 .Pp
 If the specified list begins with a
@@ -1070,14 +1067,11 @@ ssh-mldsa65-ed301-cert-v01@eirindeval.de,
 ssh-mldsa44-ed25519-cert,
 ssh-ed301@eirindeval.de,
 ssh-ed25519,
-ecdsa-sha2-nistp256,
-ecdsa-sha2-nistp384,
-ecdsa-sha2-nistp521,
+ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,
-rsa-sha2-256,
+rsa-sha2-512,rsa-sha2-256,
 ssh-mldsa65-ed301@eirindeval.de,
 ssh-mldsa44-ed25519
 .Ed
@@ -1127,14 +1121,11 @@ ssh-mldsa65-ed301-cert-v01@eirindeval.de,
 ssh-mldsa44-ed25519-cert,
 ssh-ed301@eirindeval.de,
 ssh-ed25519,
-ecdsa-sha2-nistp256,
-ecdsa-sha2-nistp384,
-ecdsa-sha2-nistp521,
-sk-ssh-ed25519@openssh.com,
+ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ecdsa-sha2-nistp256@openssh.com,
-webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,
-rsa-sha2-256,
+webauthn-sk-ecdsa-sha2-nistp256@openssh.com
+sk-ssh-ed25519@openssh.com,
+rsa-sha2-512,rsa-sha2-256,
 ssh-mldsa65-ed301@eirindeval.de,
 ssh-mldsa44-ed25519
 .Ed
@@ -1217,7 +1208,8 @@ section and environment variables as described in the
 section.
 .It Cm IdentityFile
 Specifies a file from which the user's ECDSA, authenticator-hosted ECDSA,
-Ed25519, authenticator-hosted Ed25519, MLDSA65-ED301, MLDSA44-ED25519 or RSA authentication identity is read.
+Ed301, Ed25519, authenticator-hosted Ed25519, MLDSA65-ED301
+or RSA authentication identity is read.
 You can also specify a public key file to use the corresponding
 private key that is loaded in
 .Xr ssh-agent 1
@@ -1229,7 +1221,7 @@ The default is
 .Pa ~/.ssh/id_ed301 ,
 .Pa ~/.ssh/id_ed25519 ,
 .Pa ~/.ssh/id_ed25519_sk ,
-.Pa ~/.ssh/id_mldsa65_ed301 ,
+.Pa ~/.ssh/id_mldsa65_ed301
 and
 .Pa ~/.ssh/id_mldsa44_ed25519 .
 Additionally, any identities represented by the authentication agent
@@ -1344,11 +1336,6 @@ it may be zero or more of:
 and
 .Cm pam .
 .It Cm KexAlgorithms
-The private-use Ed301 and X301 algorithms require the Ed301 build backend.
-In an OpenSSL build they additionally require active providers.
-Unavailable algorithms are removed from the default and offered lists;
-their configuration names remain valid.
-.Pp
 Specifies the permitted KEX (Key Exchange) algorithms that will be used and
 their preference order.
 The selected algorithm will be the first algorithm in this list that
@@ -1372,19 +1359,19 @@ The default is:
 .Bd -literal -offset indent
 mlkem1024x301-sha512@eirindeval.de,
 mlkem768x25519-sha256,
-sntrup761x25519-sha512,
-sntrup761x25519-sha512@openssh.com,
+sntrup761x25519-sha512,sntrup761x25519-sha512@openssh.com,
 x301-sha512@eirindeval.de,
-curve25519-sha256,
-curve25519-sha256@libssh.org,
-ecdh-sha2-nistp256,
-ecdh-sha2-nistp384,
-ecdh-sha2-nistp521,
+curve25519-sha256,curve25519-sha256@libssh.org,
+ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,
 diffie-hellman-group-exchange-sha256,
 diffie-hellman-group16-sha512,
 diffie-hellman-group18-sha512,
 diffie-hellman-group14-sha256
 .Ed
+.Pp
+The private-use Ed301 and X301 algorithms require an Ed301 build backend
+and, in an OpenSSL build, active providers.
+Without them they are not offered but remain valid configuration names.
 .Pp
 The list of supported key exchange algorithms may also be obtained using
 .Qq ssh -Q kex .
@@ -1750,14 +1737,11 @@ ssh-mldsa65-ed301-cert-v01@eirindeval.de,
 ssh-mldsa44-ed25519-cert,
 ssh-ed301@eirindeval.de,
 ssh-ed25519,
-ecdsa-sha2-nistp256,
-ecdsa-sha2-nistp384,
-ecdsa-sha2-nistp521,
+ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
 webauthn-sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,
-rsa-sha2-256,
+rsa-sha2-512,rsa-sha2-256,
 ssh-mldsa65-ed301@eirindeval.de,
 ssh-mldsa44-ed25519
 .Ed
@@ -2439,8 +2423,6 @@ tunnel forwarding was requested, or
 otherwise.
 .It %t
 The type of the server host key, e.g.
-.Cm ssh-ed301@eirindeval.de
-or
 .Cm ssh-ed25519 .
 .It %u
 The local username.
